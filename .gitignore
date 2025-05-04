@@ -1,0 +1,17 @@
+# Ignore Python virtual environments
+server/venv/
+
+# Ignore FastAPI data and temp folders
+server/data/
+server/temp_batches/
+
+# Ignore Node modules
+client/orcinvoices/node_modules/
+
+# OS-specific ignores (optional but good practice)
+.DS_Store
+Thumbs.db
+
+# IDE/editor configs (optional)
+.vscode/
+.idea/

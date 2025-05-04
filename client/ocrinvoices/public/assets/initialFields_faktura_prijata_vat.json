@@ -1,0 +1,212 @@
+[
+  {
+    "name": "id",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "lastUpdate",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "updatedBy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "createdBy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "createdDate",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "kod",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "zamekK",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "cisDosle",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "varSym",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datVyst",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datSplat",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datUhr",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "nazFirmy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "ulice",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "mesto",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "psc",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "ic",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "dic",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkem",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklCelkem",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphCelkem",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumOsv",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklSniz",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphSniz",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklZakl",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphZakl",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "szbDphSniz",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "szbDphZakl",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "polozkyFaktury/nazev",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "polozkyFaktury/mnozMj",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "polozkyFaktury/cenaMj",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "polozkyFaktury/szbDph",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "polozkyFaktury/sumZkl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "polozkyFaktury/sumDph",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "polozkyFaktury/sumCelkem",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  }
+]

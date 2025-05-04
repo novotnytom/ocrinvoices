@@ -1,0 +1,776 @@
+[
+  {
+    "name": "id",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "lastUpdate",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "updatedBy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "createdBy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "createdDate",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "kod",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "zamekK",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "cisDosle",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "varSym",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "cisSml",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "cisObj",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datObj",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "cisDodak",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "doprava",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datVyst",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "duzpPuv",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "duzpUcto",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datSplat",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datUhr",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datTermin",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datReal",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datSazbyDph",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "popis",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "poznam",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumOsv",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklSniz",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklSniz2",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklZakl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklCelkem",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphSniz",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphSniz2",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphZakl",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphCelkem",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkSniz",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkSniz2",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkZakl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkem",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumOsvMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklSnizMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklSniz2Men",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklZaklMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZklCelkemMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphZaklMen",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphSnizMen",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphSniz2Men",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumDphCelkemMen",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkSnizMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkSniz2Men",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkZaklMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkemMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "slevaDokl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "kurz",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "kurzMnozstvi",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "stavUzivK",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "nazFirmy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "ulice",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "mesto",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "psc",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "eanKod",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "ic",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "dic",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "pocetPriloh",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "buc",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "iban",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "bic",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "specSym",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "bezPolozek",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "ucetni",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "szbDphSniz",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "szbDphSniz2",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "szbDphZakl",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "uzpTuzemsko",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "zuctovano",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datUcto",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "vyloucitSaldo",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "storno",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "stitky",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "typDokl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "mena",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "konSym",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "firma",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "stat",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "region",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "banSpojDod",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "bankovniUcet",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "typDoklBan",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "typUcOp",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "primUcet",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "protiUcet",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "dphZaklUcet",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "dphSnizUcet",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "dphSniz2Ucet",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "smerKod",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "statDph",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "clenDph",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "stredisko",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "uzivatel",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "rada",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "formaDopravy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "uuid",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "source",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "clenKonVykDph",
+    "isVat": true,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "datPenale",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "podpisPrik",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "prikazSum",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "prikazSumMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "juhSum",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "juhSumMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "juhDat",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "juhDatMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "zbyvaUhradit",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "zbyvaUhraditMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "formaUhradyCis",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "stavUhrK",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "juhSumPp",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "juhSumPpMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumPrepl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumPreplMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZalohy",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumZalohyMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "stavOdpocetK",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "generovatSkl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "hromFakt",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "zdrojProSkl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "zakazPlatba",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "dobropisovano",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkemBezZaloh",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "sumCelkemBezZalohMen",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  },
+  {
+    "name": "typDoklSkl",
+    "isVat": false,
+    "active": false,
+    "label": ""
+  }
+]
