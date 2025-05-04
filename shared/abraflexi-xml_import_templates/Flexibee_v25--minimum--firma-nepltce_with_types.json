@@ -1,0 +1,326 @@
+[
+  {
+    "name": "typDokl",
+    "label": "typDokl",
+    "active": false,
+    "info": "Typ faktury (objekt)",
+    "system": true,
+    "example": "code:FAKTURA",
+    "type": "string"
+  },
+  {
+    "name": "cisDosle",
+    "label": "cisDosle",
+    "active": true,
+    "info": "Číslo došlé (string) - max. 30",
+    "system": false,
+    "example": "123456",
+    "type": "string"
+  },
+  {
+    "name": "varSym",
+    "label": "varSym",
+    "active": true,
+    "info": "Variabilní symbol (string)",
+    "system": false,
+    "example": "123456",
+    "type": "integer"
+  },
+  {
+    "name": "datVyst",
+    "label": "datVyst, YYYY--MM-DD",
+    "active": true,
+    "info": "Vystaveno (datum) - format YYYY--MM-DD, ISO 8601 date",
+    "system": false,
+    "example": "2024-01-02",
+    "type": "date"
+  },
+  {
+    "name": "datSplat",
+    "label": "datSplat, YYYY--MM-DD",
+    "active": true,
+    "info": "Splatnost (datum) - format YYYY--MM-DD",
+    "system": false,
+    "example": "2024-01-15",
+    "type": "date"
+  },
+  {
+    "name": "stitky",
+    "label": "stitky",
+    "active": true,
+    "info": "Štítky (string, musí ale existovat!)",
+    "system": false,
+    "example": "RCH DPH",
+    "type": "string"
+  },
+  {
+    "name": "formaUhradyCis",
+    "label": "formaUhradyCis code:PREVOD,KARTA,DOBIRKA,HOTOVE",
+    "active": true,
+    "info": "Forma úhrady (objekt = code:ZAPOCET,SLOZENKA,SEK,PREVOD,KARTA,HOTOVE,DOBIRKA)",
+    "system": false,
+    "example": "code:PREVOD",
+    "type": "string"
+  },
+  {
+    "name": "poznam",
+    "label": "poznam",
+    "active": true,
+    "info": "Poznámka (string) -",
+    "system": false,
+    "example": "poznamka jakakoliv",
+    "type": "string"
+  },
+  {
+    "name": "firma",
+    "label": "firma, code:ADSK",
+    "active": false,
+    "info": "Firma (objekt, code:ADSK, pouze kdyz je ulozena v adresari) - max. délka: 20",
+    "system": true,
+    "example": "code: ADSK",
+    "type": "string"
+  },
+  {
+    "name": "nazFirmy",
+    "label": "nazFirmy",
+    "active": true,
+    "info": "Název firmy nebo jméno osoby (string)",
+    "system": false,
+    "example": "Firma s.r.o.",
+    "type": "string"
+  },
+  {
+    "name": "ulice",
+    "label": "ulice",
+    "active": true,
+    "info": "Ulice (string)",
+    "system": false,
+    "example": "Ulice 12",
+    "type": "string"
+  },
+  {
+    "name": "mesto",
+    "label": "mesto",
+    "active": true,
+    "info": "Město (string)",
+    "system": false,
+    "example": "Město",
+    "type": "string"
+  },
+  {
+    "name": "psc",
+    "label": "psc",
+    "active": true,
+    "info": "PSČ (string)",
+    "system": false,
+    "example": "504 01",
+    "type": "string"
+  },
+  {
+    "name": "eanKod",
+    "label": "eanKod",
+    "active": true,
+    "info": "EAN (string)",
+    "system": false,
+    "example": "",
+    "type": "string"
+  },
+  {
+    "name": "ic",
+    "label": "ic",
+    "active": true,
+    "info": "IČO (string)",
+    "system": false,
+    "example": "11111111",
+    "type": "string"
+  },
+  {
+    "name": "dic",
+    "label": "dic",
+    "active": true,
+    "info": "DIČ (string)",
+    "system": false,
+    "example": "cz11111111",
+    "type": "string"
+  },
+  {
+    "name": "buc",
+    "label": "buc",
+    "active": true,
+    "info": "Číslo bank. účtu (string)",
+    "system": false,
+    "example": "35-123456/0100",
+    "type": "string"
+  },
+  {
+    "name": "iban",
+    "label": "iban",
+    "active": true,
+    "info": "IBAN (string)",
+    "system": false,
+    "example": "CZ3500001111111",
+    "type": "string"
+  },
+  {
+    "name": "bic",
+    "label": "bic",
+    "active": true,
+    "info": "BIC (string)",
+    "system": false,
+    "example": "KBCCC",
+    "type": "string"
+  },
+  {
+    "name": "specSym",
+    "label": "specSym, code:001",
+    "active": true,
+    "info": "Specifický symbol (string)",
+    "system": false,
+    "example": "",
+    "type": "string"
+  },
+  {
+    "name": "stat",
+    "label": "stat, code:CZ",
+    "active": false,
+    "info": "Stát (objekt code:CZ) - max. délka: 3",
+    "system": true,
+    "example": "code:CZ",
+    "type": "string"
+  },
+  {
+    "name": "ucetni",
+    "label": "ucetni",
+    "active": false,
+    "info": "Je účetní (logická hodnota) -",
+    "system": true,
+    "example": "true",
+    "type": "boolean"
+  },
+  {
+    "name": "zuctovano",
+    "label": "zuctovano",
+    "active": false,
+    "info": "Zaúčtováno (logická hodnota) -",
+    "system": true,
+    "example": "true",
+    "type": "boolean"
+  },
+  {
+    "name": "popis",
+    "label": "popis, celá faktura",
+    "active": true,
+    "info": "Popis, nebo název 1. a jediné položky (string) - max. délka: 255",
+    "system": false,
+    "example": "Souhrn název faktury",
+    "type": "string"
+  },
+  {
+    "name": "mena",
+    "label": "mena, code:CZK",
+    "active": false,
+    "info": "Měna (objekt)",
+    "system": true,
+    "example": "code:CZK",
+    "type": "string"
+  },
+  {
+    "name": "slevaDokl",
+    "label": "slevaDokl, celkova",
+    "active": true,
+    "info": "Sleva [%] (desetinné číslo) - min. hodnota: -100.0 max.hodnota: 100.0 počet číslic: 6",
+    "system": false,
+    "example": "10",
+    "type": "decimal"
+  },
+  {
+    "name": "typUcOp",
+    "label": "typUcOp",
+    "active": false,
+    "info": "Předpis zaúčtování (objekt, podle FLEXI) - max. délka: 20",
+    "system": true,
+    "example": "code:NÁKUP SLUŽBY",
+    "type": "string"
+  },
+  {
+    "name": "primUcet",
+    "label": "primUcet",
+    "active": false,
+    "info": "Účet DAL (objekt) - max. délka: 6",
+    "system": true,
+    "example": "code:321001",
+    "type": "string"
+  },
+  {
+    "name": "protiUcet",
+    "label": "protiUcet",
+    "active": false,
+    "info": "Účet MD (objekt) - max. délka: 6",
+    "system": true,
+    "example": "code:518001",
+    "type": "string"
+  },
+  {
+    "name": "nazev",
+    "label": "SP_nazev",
+    "active": true,
+    "info": "Název (string)",
+    "system": false,
+    "example": "Položka faktury",
+    "type": "string"
+  },
+  {
+    "name": "mnozMj",
+    "label": "SP_mnozMj",
+    "active": true,
+    "info": "Množství (desetinné číslo)",
+    "system": false,
+    "example": "1.0",
+    "type": "decimal"
+  },
+  {
+    "name": "cenaMj",
+    "label": "SP_cenaMj",
+    "active": true,
+    "info": "Cena za MJ (desetinné číslo)",
+    "system": false,
+    "example": "100.00",
+    "type": "decimal"
+  },
+  {
+    "name": "szbDph",
+    "label": "SP_szbDph",
+    "active": true,
+    "info": "DPH [%] (destinné číslo) - počet číslic: 6",
+    "system": false,
+    "example": "21",
+    "type": "decimal"
+  },
+  {
+    "name": "slevaMnoz",
+    "label": "SP_slevaMnoz",
+    "active": true,
+    "info": "Množstevní sleva [%] (desetinné číslo) - min. hodnota: 0.0 max.hodnota: 100.0 počet číslic: 6",
+    "system": false,
+    "example": "10",
+    "type": "decimal"
+  },
+  {
+    "name": "slevaPol",
+    "label": "SP_slevaPol",
+    "active": true,
+    "info": "Sleva položky[%] (desetinné číslo) - min. hodnota: -100.0 max.hodnota: 100.0 počet číslic: 6",
+    "system": false,
+    "example": "10",
+    "type": "decimal"
+  },
+  {
+    "name": "uplSlevaDokl",
+    "label": "SP_uplSlevaDokl",
+    "active": false,
+    "info": "? sleva hlav. (logická hodnota) -",
+    "system": false,
+    "example": "false",
+    "type": "decimal"
+  }
+]

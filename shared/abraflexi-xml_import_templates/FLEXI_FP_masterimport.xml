@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<winstrom version="1.0" source="FlexiBee">
+	<!-- Doklady faktur -->
+	<faktura-prijata>	
+	<!-- Typ faktury (objekt) - max. délka: 20 -->
+	<typDokl>code:FAKTURA</typDokl>		
+	<!-- Číslo došlé (řetězec) - max. délka: 30 -->
+	<cisDosle>0006</cisDosle>
+	<!-- Variabilní symbol (řetězec) - -->
+	<varSym>0006</varSym>
+	<!-- Vystaveno (datum) - -->
+	<datVyst>2024-01-02</datVyst>
+	<!-- Splatnost (datum) - -->
+	<datSplat>2024-01-15</datSplat>
+    <!--  Štítky (řetězec, musí ale existovat) -  -->
+    <stitky></stitky>
+    <!-- Forma úhrady (objekt = code:ZAPOCET,SLOZENKA,SEK,PREVOD,KARTA,HOTOVE,DOBIRKA) - max. délka: 20 -->
+    <formaUhradyCis>code:HOTOVE</formaUhradyCis>
+    <!-- Poznámka (řetězec) - -->
+    <poznam>Šablona ukázkové faktury-přijaté v EUR s položkami</poznam>
+		
+    <!-- Firma (objekt, code:ADSK, pouze kdyz je ulozena v adresari) - max. délka: 20 -->
+	<firma></firma>
+
+    <!-- Název firmy nebo jméno osoby (řetězec) - max. délka: 255 -->
+    <nazFirmy>Firma neplátce s.r.o.</nazFirmy>
+    <!-- Ulice (řetězec) - max. délka: 255 -->
+    <ulice>Ulice 123</ulice>
+    <!-- Město (řetězec) - max. délka: 255 -->
+    <mesto>Nový Bydžov</mesto>
+    <!-- PSČ (řetězec) - max. délka: 255 -->
+    <psc>50401</psc>
+    <!-- EAN (řetězec) - max. délka: 20 -->
+    <eanKod></eanKod>
+    <!-- IČO (řetězec) - max. délka: 20 -->
+    <ic>11111111</ic>
+    <!-- DIČ (řetězec) - max. délka: 20 -->
+    <dic></dic>
+    <!-- Číslo bank. účtu (řetězec) - max. délka: 255 -->
+    <buc>35-12345678/0100</buc>
+    <!-- IBAN (řetězec) - max. délka: 255 -->
+    <iban>cz00000358749823749823</iban>
+    <!-- BIC (řetězec) - max. délka: 255 -->
+    <bic></bic>
+    <!-- Specifický symbol (řetězec) - max. délka: 255 -->
+    <specSym></specSym>
+    <!-- Stát (objekt code:CZ) - max. délka: 3 -->
+    <stat>code:CZ</stat>
+
+    <!--  Bezpol. dokl. (logická hodnota) -  -->
+    <bezPolozek>false</bezPolozek>   
+    <!--  Je účetní (logická hodnota) -  -->
+    <ucetni>true</ucetni> 
+    <!--  Zaúčtováno (logická hodnota) -  -->
+    <zuctovano>true</zuctovano>
+
+    <!-- Popis, nebo název 1. a jediné položky (řetězec) - max. délka: 255 -->
+	<popis>Název faktury pouze</popis>
+    <!-- Řádky DPH (objekt, neplátce je 000P) - max. délka: 20 -->
+    <clenDph>code:000P</clenDph>
+    <!-- Měna (objekt) - max. délka: 20 -->
+    <mena>code:CZK</mena>
+    <!-- Osvob., bez DPH [Kč] - BEZPOL pouze (desetinné číslo) - počet číslic: 15 -->
+    <sumOsv></sumOsv>
+    <!--  Sleva [%] (desetinné číslo) - min. hodnota: -100.0 max.hodnota: 100.0 počet číslic: 6  -->
+    <slevaDokl>0.0</slevaDokl>
+    <!-- Předpis zaúčtování (objekt, podle FLEXI) - max. délka: 20 -->
+    <typUcOp>code:NÁKUP SLUŽBY</typUcOp>
+     <!-- Účet DAL (objekt) - max. délka: 6 -->
+    <primUcet>code:321001</primUcet>
+    <!-- Účet MD (objekt) - max. délka: 6 -->
+    <protiUcet>code:518001</protiUcet>
+
+    <polozkyFaktury>
+        <!--  Položky faktur  -->
+        <faktura-prijata-polozka>
+            <!--  Název (řetězec) - max. délka: 255  -->
+            <nazev>Testovací položka</nazev>
+            <!--  Množství (desetinné číslo) - počet číslic: 19  -->            
+            <mnozMj>1</mnozMj>
+            <!--  Cena za MJ (desetinné číslo) - počet číslic: 19  -->
+            <cenaMj>1000.00</cenaMj>
+            <!--  Typ ceny 
+                bez DPH - typCeny.bezDph
+                včetně DPH (přesně) - typCeny.sDph
+                včetně DPH (koeficient) - typCeny.sDphKoef  -->
+            <typCenyDphK/>
+            <!--   Typ sazby DPH 
+                            osvobozeno - typSzbDph.dphOsv
+                            snížená - typSzbDph.dphSniz
+                            základní - typSzbDph.dphZakl   -->
+            <typSzbDphK>typSzbDph.dphZakl</typSzbDphK>
+            <!--   DPH [%] (destinné číslo) - počet číslic: 6   -->
+            <szbDph>21.0</szbDph>
+            <!--  Řádky DPH (objekt) - max. délka: 20  -->
+            <clenDph>code:000P</clenDph>
+            <!--  Množstevní sleva [%] (desetinné číslo) - min. hodnota: 0.0 max.hodnota: 100.0 počet číslic: 6  -->
+            <slevaMnoz>0.0</slevaMnoz>
+            <!--  Způsob zaokr. ceny 
+                nahoru - zaokrJak.nahoru
+                dolů - zaokrJak.dolu
+                matematicky - zaokrJak.matem  -->
+            <!--  Sleva položky[%] (desetinné číslo) - min. hodnota: -100.0 max.hodnota: 100.0 počet číslic: 6  -->
+            <slevaPol>0.0</slevaPol>
+            <!--  ? sleva hlav. (logická hodnota) -  -->
+            <uplSlevaDokl>false</uplSlevaDokl>
+            <zaokrJakK/>
+            <!--  Řád zaokr. ceny 
+                nezaokrouhlovat - zaokrNa.zadne
+                0.001 - zaokrNa.tisiciny
+                0.01 - zaokrNa.setiny
+                0.05 - zaokrNa.5setiny
+                0.1 - zaokrNa.desetiny
+                0.5 - zaokrNa.5desetiny
+                1 - zaokrNa.jednotky
+                5 - zaokrNa.5jednotky
+                10 - zaokrNa.desitky
+                100 - zaokrNa.stovky
+                1000 - zaokrNa.tisice  -->
+            <zaokrNaK/>
+            <!--  Poznámka (řetězec) -  -->
+            <poznam/>
+            <!--  Sleva dokladu [%] (desetinné číslo) - min. hodnota: -100.0 max.hodnota: 100.0 počet číslic: 6  -->
+            <slevaDokl>0.0</slevaDokl>
+        </faktura-prijata-polozka>
+    </polozkyFaktury>
+
+    
+    
+    <!-- Přílohy, číslo -->
+    <prilohy>     
+      <priloha>      
+        <!-- Název souboru (řetězec) - max. délka: 255 -->
+        <nazSoub>nazevsouboru.jpg</nazSoub>  
+        <!-- Typ dat (řetězec) - max. délka: 127 -->
+        <contentType>image/jpg</contentType>       
+        <content encoding="base64"></content>
+      </priloha>
+    </prilohy>
+
+
+
+	</faktura-prijata>
+</winstrom>
