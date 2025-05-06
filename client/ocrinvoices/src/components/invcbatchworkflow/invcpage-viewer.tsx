@@ -29,6 +29,7 @@ interface PageViewerProps {
   onDeleteItemRow: (rowId: number) => void;
   isLocked: boolean;
   onToggleLock: () => void;
+  referenceValues?: Record<string, string>;
 }
 
 export default function PageViewer({
@@ -45,6 +46,7 @@ export default function PageViewer({
   onDeleteItemRow,
   isLocked,
   onToggleLock,
+  referenceValues,
 }: PageViewerProps) {
   const [image] = useImage(`http://localhost:8000${imageUrl}`, 'anonymous');
   const [scale, setScale] = useState(1);
@@ -233,6 +235,14 @@ export default function PageViewer({
                     onBlur={() => onFocusZone(null)}
                     onChange={e => onValueChange(zone.propertyName, e.target.value)}
                   />
+                  {referenceValues?.[zone.propertyName] !== undefined && (
+                    <button
+                      className="text-xs text-blue-600 hover:underline"
+                      onClick={() => onValueChange(zone.propertyName, referenceValues[zone.propertyName])}
+                    >
+                      Copy
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

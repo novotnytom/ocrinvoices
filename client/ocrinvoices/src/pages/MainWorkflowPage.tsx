@@ -422,6 +422,7 @@ export default function MainWorkflowPage() {
             imageUrl={page.imageUrl}
             zones={page.zones}
             values={page.values}
+            referenceValues={i === 0 ? undefined : pages[0].values}
             highlightProperty={highlightedZone?.pageIndex === i ? highlightedZone.property : null}
             onZoneMove={(id, x, y) => updateZonePosition(i, id, x, y)}
             onValueChange={(property, value) => {

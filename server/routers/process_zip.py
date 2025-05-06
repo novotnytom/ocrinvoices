@@ -10,7 +10,7 @@ import json
 router = APIRouter()
 
 TEMP_DIR = "temp_batches"
-PROFILE_DIR = "profiles"
+PROFILE_DIR = "data/profiles"
 
 os.makedirs(TEMP_DIR, exist_ok=True)
 

@@ -39,8 +39,15 @@ async def ocr_test(image: UploadFile = File(...), zones: str = Form(...)):
         )
         cropped = pil_image.crop(crop_box)
         try:
-            value = pytesseract.image_to_string(cropped).strip()
-            success = True
+            value = pytesseract.image_to_string(cropped, lang='ces+eng+deu+pol').strip()
+            if not value or value == "NaN":
+                # Fallback to digit-only mode
+                value = pytesseract.image_to_string(
+                    cropped,
+                    lang='eng',  # You can skip lang or use 'eng' for numerals
+                    config='--psm 7 -c tessedit_char_whitelist=0123456789,.-'
+                ).strip()
+            success = True if value else False
         except Exception as e:
             print(f"[OCR] Error processing zone {zone.id}: {e}")
             value = "NaN"

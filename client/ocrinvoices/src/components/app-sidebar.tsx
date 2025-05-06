@@ -201,7 +201,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="text-xs text-muted-foreground p-4 border-t border-border space-y-1">
-        <div>Version: 0.1.0</div>
+        <div>Version: 0.1.1</div>
         <div>RPM-mobility s.r.o.</div>
         <div>Revoluční třída 232</div>
         <div>Nový Bydžov 504 01</div>
