@@ -152,15 +152,21 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
         for key, value in values.items():
             ET.SubElement(faktura, key).text = str(value)
 
-        ET.SubElement(faktura, "ucetni").text = "true"
-        ET.SubElement(faktura, "zuctovano").text = "true"
-        ET.SubElement(faktura, "bezPolozek").text = "false"
+        # ET.SubElement(faktura, "ucetni").text = "true"
+        # ET.SubElement(faktura, "zuctovano").text = "true"
+        # ET.SubElement(faktura, "bezPolozek").text = "false"
 
         polozky = ET.SubElement(faktura, "polozkyFaktury")
         for item in items:
             polozka = ET.SubElement(polozky, "faktura-prijata-polozka")
             for k, v in item.items():
                 ET.SubElement(polozka, k).text = str(v)
+
+        osv_value = values.get("osv")
+        if osv_value:
+            zaokrouhli = ET.SubElement(faktura, "zaokrouhli")
+            ceny = ET.SubElement(zaokrouhli, "pozadovaneCeny")
+            ET.SubElement(ceny, "osv").text = str(osv_value)
 
         if image_filename:
             queue_dir = f"data/queues/{invoice.get('batch_name')}"
