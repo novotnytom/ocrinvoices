@@ -134,6 +134,14 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
             invoice = json.load(f)
 
         values = invoice.get("values", {})
+
+        # Fallback logic: if datSplat missing/empty/zero, use datVyst
+        dat_splat = values.get("datSplat", "").strip()
+        if not dat_splat or dat_splat == "0":
+            dat_vyst = values.get("datVyst")
+            if dat_vyst:
+                values["datSplat"] = dat_vyst
+
         items = invoice.get("invoiceItems", [])
         template = invoice.get("template_used", "default")
         invoice_number = invoice.get("invoice_number", "unknown")
@@ -154,7 +162,6 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
             for k, v in item.items():
                 ET.SubElement(polozka, k).text = str(v)
 
-        # Add image as <priloha>
         if image_filename:
             queue_dir = f"data/queues/{invoice.get('batch_name')}"
             image_path = os.path.join(queue_dir, image_filename)
@@ -170,6 +177,7 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
                 ET.SubElement(priloha, "nazSoub").text = filename_xml
                 ET.SubElement(priloha, "contentType").text = content_type
                 ET.SubElement(priloha, "content", attrib={"encoding": "base64"}).text = encoded
-                
+
     xml_str = ET.tostring(winstrom, encoding="utf-8", method="xml")
     return Response(content=xml_str, media_type="application/xml")
+
