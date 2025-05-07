@@ -498,6 +498,16 @@ export default function MainWorkflowPage() {
                 return updated;
               });
             }}
+            onZoneChange={(newZones) => {
+              setPages(prev => {
+                const updated = [...prev];
+                updated[i] = {
+                  ...updated[i],
+                  zones: newZones,
+                };
+                return updated;
+              });
+            }}
           />
         ))}
 

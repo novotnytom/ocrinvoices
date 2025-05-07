@@ -60,3 +60,9 @@ v.0.1.1 - feedback
 DONE - kopirování itemu mezi strankami, aby nebylo třeba vypisovat pokaždé firmu - mainWorkflow
 DONE - pokud datSplatnosti chybí je stejné jako datVyst (aby se nemuseli duplikovat) - pouze na backendu exportu
 DONE - zaokrouhlení - resi se hodnotou osv - Požadovaná celková cena - automaticky se pak přidá položka zaokrouhlení
+
+v.0.1.2 - feedback
+DONE - InvcWorkflow: korekcni tlacitka modulární
+            - při kliknutí na input se aktivují
+            - je možné zvětšít nebo zmenšít vybranou zónu
+            - umítěné nad obrázkem

@@ -2,7 +2,9 @@
 
 import React, { useState, useRef } from 'react';
 import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva';
+import { Button } from '@/components/ui/button';
 import useImage from 'use-image';
+import ZoneResizeToolbar from './zone-resize-toolbar';
 
 interface Zone {
   id: number;
@@ -30,6 +32,7 @@ interface PageViewerProps {
   isLocked: boolean;
   onToggleLock: () => void;
   referenceValues?: Record<string, string>;
+  onZoneChange?: (zones: Zone[]) => void;
 }
 
 export default function PageViewer({
@@ -47,11 +50,13 @@ export default function PageViewer({
   isLocked,
   onToggleLock,
   referenceValues,
+  onZoneChange,
 }: PageViewerProps) {
   const [image] = useImage(`http://localhost:8000${imageUrl}`, 'anonymous');
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [deltaMove, setDeltaMove] = useState<{ dx: number; dy: number; movedZoneId: number } | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const stageRef = useRef<any>(null);
 
   const itemZones = zones.filter(z => z.isItem);
@@ -79,10 +84,45 @@ export default function PageViewer({
     setDeltaMove(null);
   };
 
+  const handleInputFocus = (propertyName: string | null) => {
+    setSelectedProperty(propertyName);
+    onFocusZone?.(propertyName);
+  };
+
+  const handleResizeZone = (direction: 'width' | 'width-' | 'height' | 'height-') => {
+    if (!selectedProperty) return;
+
+    const updatedZones = zones.map((z) =>
+      z.propertyName === selectedProperty
+        ? {
+          ...z,
+          width:
+            direction === 'width' ? z.width + 1 :
+              direction === 'width-' ? Math.max(5, z.width - 1) :
+                z.width,
+          height:
+            direction === 'height' ? z.height + 1 :
+              direction === 'height-' ? Math.max(5, z.height - 1) :
+                z.height,
+        }
+        : z
+    );
+
+    onZoneChange?.(updatedZones);
+  };
+
   return (
     <div className="p-4 border rounded space-y-4">
       <div className="flex gap-4">
         <div className="w-[700px] bg-gray-100 p-4 rounded">
+          <div>
+            {selectedProperty && (
+              <ZoneResizeToolbar
+                selectedProperty={selectedProperty}
+                onResize={handleResizeZone}
+              />
+            )}
+          </div>
           <Stage
             ref={stageRef}
             width={650}
@@ -218,9 +258,6 @@ export default function PageViewer({
             </div>
           </div>
 
-
-
-
           {/* Non-item zones */}
           <div className="bg-muted/30 border rounded px-3 py-2 text-sm mb-3">
             <div className="space-y-3">
@@ -231,7 +268,7 @@ export default function PageViewer({
                     type="text"
                     value={values[zone.propertyName] || ''}
                     className="flex-1 border border-input bg-background rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    onFocus={() => onFocusZone(zone.propertyName)}
+                    onFocus={() => handleInputFocus(zone.propertyName)}
                     onBlur={() => onFocusZone(null)}
                     onChange={e => onValueChange(zone.propertyName, e.target.value)}
                   />
@@ -280,7 +317,7 @@ export default function PageViewer({
                               type="text"
                               value={zone ? values[zone.propertyName] || '' : ''}
                               className="border p-1 w-full text-sm"
-                              onFocus={() => onFocusZone(zone?.propertyName ?? null)}
+                              onFocus={() => handleInputFocus(zone?.propertyName ?? null)}
                               onBlur={() => onFocusZone(null)}
                               onChange={e => {
                                 if (zone) {
