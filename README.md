@@ -66,3 +66,8 @@ DONE - InvcWorkflow: korekcni tlacitka modulární
             - při kliknutí na input se aktivují
             - je možné zvětšít nebo zmenšít vybranou zónu
             - umítěné nad obrázkem
+
+DONE	InvcWorkflow: Delta Y pro Add new Item button	
+	- nastavit logiku, aby delta pro nove pole bylo minimlane vyska nejvyssiho nadnim. (neni potreba)
+	- zatim staci input s velikosti offsetu vedle tlacitka Add Row of Invoice Items
+	- zaroven vyresen problem s duplicitnim pridavanim poli (misto jednoho radku, pribyly vzdy dva)
