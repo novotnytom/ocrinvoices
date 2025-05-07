@@ -4,6 +4,9 @@ server/venv/
 # Ignore FastAPI data and temp folders
 server/data/
 server/temp_batches/
+server/backups/
+
+shared/
 
 # Ignore Node modules
 client/orcinvoices/node_modules/
