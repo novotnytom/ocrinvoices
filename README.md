@@ -52,3 +52,11 @@ npm install
 
 # Run development server
 npm run dev
+
+
+# Changelog
+
+v.0.1.1 - feedback
+DONE - kopirování itemu mezi strankami, aby nebylo třeba vypisovat pokaždé firmu - mainWorkflow
+DONE - pokud datSplatnosti chybí je stejné jako datVyst (aby se nemuseli duplikovat) - pouze na backendu exportu
+DONE - zaokrouhlení - resi se hodnotou osv - Požadovaná celková cena - automaticky se pak přidá položka zaokrouhlení
