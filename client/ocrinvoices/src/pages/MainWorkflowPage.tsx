@@ -436,38 +436,7 @@ export default function MainWorkflowPage() {
               if (property) setHighlightedZone({ pageIndex: i, property });
               else setHighlightedZone(null);
             }}
-            onOCRPage={() => handleOCRPage(i)}
-            onAddItemRow={() => {
-              setPages(prev => {
-                const updated = [...prev];
-                const page = updated[i];
-
-                // Use only base template zones (rowId === 0 or undefined)
-                const baseItemZones = page.zones.filter(z => z.isItem && (!z.rowId || z.rowId === 0));
-
-                const existingRowIds = page.zones
-                  .filter(z => z.isItem && typeof z.rowId === 'number')
-                  .map(z => z.rowId!);
-                const maxRowId = existingRowIds.length > 0 ? Math.max(...existingRowIds) : 0;
-                const nextRowId = maxRowId + 1;
-
-                const maxId = Math.max(0, ...page.zones.map(z => z.id));
-                const deltaY = 40;
-                let nextId = maxId + 1;
-
-                const newZones = baseItemZones.map(z => ({
-                  ...z,
-                  id: nextId++,
-                  y: z.y + deltaY * nextRowId,
-                  rowId: nextRowId,
-                  propertyName: `${z.propertyName}_r${nextRowId}`
-                }));
-
-                page.zones = [...page.zones, ...newZones];
-                updated[i] = page;
-                return updated;
-              });
-            }}
+            onOCRPage={() => handleOCRPage(i)}            
             onDeleteItemRow={(rowId) => {
               setPages(prev => {
                 const updated = [...prev];

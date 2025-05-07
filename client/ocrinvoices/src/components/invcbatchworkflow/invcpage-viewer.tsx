@@ -26,8 +26,7 @@ interface PageViewerProps {
   onZoneMove: (id: number, x: number, y: number) => void;
   onValueChange: (property: string, value: string) => void;
   onFocusZone: (property: string | null) => void;
-  onOCRPage: () => void;
-  onAddItemRow: () => void;
+  onOCRPage: () => void;  
   onDeleteItemRow: (rowId: number) => void;
   isLocked: boolean;
   onToggleLock: () => void;
@@ -44,8 +43,7 @@ export default function PageViewer({
   onZoneMove,
   onValueChange,
   onFocusZone,
-  onOCRPage,
-  onAddItemRow,
+  onOCRPage,  
   onDeleteItemRow,
   isLocked,
   onToggleLock,
@@ -57,6 +55,7 @@ export default function PageViewer({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [deltaMove, setDeltaMove] = useState<{ dx: number; dy: number; movedZoneId: number } | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const [itemRowYOffset, setItemRowYOffset] = useState(40); // default 40
   const stageRef = useRef<any>(null);
 
   const itemZones = zones.filter(z => z.isItem);
@@ -110,6 +109,30 @@ export default function PageViewer({
 
     onZoneChange?.(updatedZones);
   };
+
+  const handleAddRow = () => {
+    const baseItemZones = zones.filter(z => z.isItem && (!z.rowId || z.rowId === 0));
+  
+    const existingRowIds = zones
+      .filter(z => z.isItem && typeof z.rowId === 'number')
+      .map(z => z.rowId!);
+    const maxRowId = existingRowIds.length > 0 ? Math.max(...existingRowIds) : 0;
+    const nextRowId = maxRowId + 1;
+  
+    const maxId = Math.max(0, ...zones.map(z => z.id));
+    let nextId = maxId + 1;
+  
+    const newZones = baseItemZones.map(z => ({
+      ...z,
+      id: nextId++,
+      y: z.y + itemRowYOffset * nextRowId,
+      rowId: nextRowId,
+      propertyName: `${z.propertyName}_r${nextRowId}`
+    }));
+  
+    onZoneChange?.([...zones, ...newZones]);
+  };
+  
 
   return (
     <div className="p-4 border rounded space-y-4">
@@ -343,15 +366,21 @@ export default function PageViewer({
                 </tbody>
               </table>
             </div>
-            <div className="mt-2 flex items-center gap-4">
-
+            <div className="flex items-center gap-4 my-2">
               <button
-                onClick={onAddItemRow}
+                onClick={handleAddRow}
                 className="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded"
               >
                 ➕ Add Row of Invoice Items
               </button>
 
+              <label className="text-sm font-medium">Y Offset:</label>
+              <input
+                type="number"
+                value={itemRowYOffset}
+                onChange={(e) => setItemRowYOffset(Number(e.target.value))}
+                className="w-20 border px-2 py-1 text-sm"
+              />
             </div>
           </div>
         )}
