@@ -71,3 +71,7 @@ DONE	InvcWorkflow: Delta Y pro Add new Item button
 	- nastavit logiku, aby delta pro nove pole bylo minimlane vyska nejvyssiho nadnim. (neni potreba)
 	- zatim staci input s velikosti offsetu vedle tlacitka Add Row of Invoice Items
 	- zaroven vyresen problem s duplicitnim pridavanim poli (misto jednoho radku, pribyly vzdy dva)
+
+DONE  ConverterPage
+    - implemtance exportu Zasilkovny do Flexibee bank. výpisu
+    

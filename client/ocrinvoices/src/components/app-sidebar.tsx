@@ -18,7 +18,8 @@ import {
   FileText,
   Files,
   X,
-  DatabaseBackup
+  DatabaseBackup,
+  Binary,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -58,7 +59,7 @@ export function AppSidebar() {
       alert('Failed to create backup');
     }
   };
-  
+
 
   return (
     <Sidebar>
@@ -83,6 +84,12 @@ export function AppSidebar() {
                   <a onClick={handleBackup}>
                     <DatabaseBackup className="w-4 h-4 mr-1" />
                     <span>Start Backup Now</span>
+                  </a>
+                </SidebarMenuButton>
+                <SidebarMenuButton asChild>
+                  <a href="/converter">
+                    <Binary className="w-4 h-4 mr-1" />
+                    <span>Converter Tool</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
