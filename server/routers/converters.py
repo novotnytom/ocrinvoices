@@ -76,6 +76,8 @@ async def convert_stripe_bank(files: list[UploadFile] = File(...)):
         earliest_date = None
         latest_date = None
 
+        transfers.sort(key=lambda r: r.get("Created (UTC)", ""))    #oldest to newest
+
         for row in transfers:
             txn_type = row.get("Type", "").strip().lower()
             txn_id = row.get("Source") or row.get("id")
