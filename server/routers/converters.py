@@ -411,13 +411,26 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
 
 
 def process_zasilkovna_csv(content: str, original_filename: str, output_dir: str):
-    match = re.match(r"(\d{4}-\d{2}-\d{2})__(.+)\.csv", original_filename)
-    if not match:
-        print(f"Invalid filename: {original_filename}")
+    reference_id = os.path.splitext(original_filename)[0]
+
+    reader = csv.reader(io.StringIO(content), delimiter=";")
+    lines = list(reader)
+    if not lines or len(lines[0]) < 32:
+        print("Invalid CSV structure")
         return
 
-    extracted_date = match.group(1)
-    reference_id = match.group(2)
+    data_lines = lines[1:]
+    if not data_lines:
+        print("No data rows found in CSV")
+        return
+
+    # Extract date from first row (column 3 — "Datum podání")
+    try:
+        extracted_date = datetime.strptime(data_lines[0][3], "%Y-%m-%d").strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"⚠️ Failed to parse submission date from CSV: {e}")
+        extracted_date = "unknown"
+
     output_filename = f"{extracted_date}__{reference_id}.dobirky@zasilkovna.cz.csv"
     output_path = os.path.join(output_dir, output_filename)
 
@@ -492,6 +505,8 @@ def process_zasilkovna_csv(content: str, original_filename: str, output_dir: str
 
     return output_filename
 
+def format_decimal(val):
+    return f"{val:.2f}".replace(".", ",")
 
 def safe_str(value):
     return '' if pd.isna(value) else str(value)
