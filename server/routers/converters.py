@@ -421,7 +421,7 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
                     content_el = ET.SubElement(p, "content", encoding="base64")
                     content_el.text = encoded
 
-            doklady.append(((podani_date, int(rok), int(mesic)), doklad))
+            doklady.append(((podani_date, int(rok), int(mesic)), doklad, mesic, rok, podani_date_iso))
             invoice_counter += 1
 
         return doklady
@@ -446,8 +446,8 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
             continue
 
     all_doklady.sort(key=lambda x: (x[0][0], x[0][1], x[0][2]))  # podani_date, rok, mesic
-    for _, doklad in all_doklady:
-        attached_root.append(doklad)
+    for d in all_doklady:
+        attached_root.append(d[1])
 
     if all_doklady:
         min_date = min(d[0][0] for d in all_doklady).strftime("%Y-%m-%d")
@@ -466,8 +466,15 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
     with zipfile.ZipFile(zip_path, "w") as zipf:
         zipf.write(xml_path, arcname=xml_filename)
 
-    return FileResponse(zip_path, filename=zip_filename, media_type="application/zip")
+        for (_, _, mesic, rok, podani_date_iso), doklad in zip(all_doklady, [d[1] for d in all_doklady]):
+            single_root = ET.Element("winstrom", version="1.0")
+            single_root.append(doklad)
+            separate_filename = f"DPH({mesic})-{rok}_{podani_date_iso}__interni-doklad.xml"
+            separate_path = os.path.join(tempdir, separate_filename)
+            ET.ElementTree(single_root).write(separate_path, encoding="utf-8", xml_declaration=True)
+            zipf.write(separate_path, arcname=separate_filename)
 
+    return FileResponse(zip_path, filename=zip_filename, media_type="application/zip")
 
 def process_zasilkovna_csv(content: str, original_filename: str, output_dir: str) -> tuple[str, str]:
     reference_id = os.path.splitext(original_filename)[0]
