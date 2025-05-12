@@ -72,18 +72,44 @@ async def convert_stripe_bank(files: list[UploadFile] = File(...)):
         ]
         writer.writerow(header)
 
+        # Track min/max dates
+        earliest_date = None
+        latest_date = None
+
         for row in transfers:
             txn_type = row.get("Type", "").strip().lower()
             txn_id = row.get("Source") or row.get("id")
-            created = row.get("Created (UTC)")
+            created_raw = row.get("Created (UTC)", "").strip()
+
+            if not created_raw:
+                print(f"⚠️ Missing Created (UTC) in row: {row}")
+                continue
+
+            try:
+                match = re.match(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", created_raw)
+                if not match:
+                    print(f"⚠️ Unrecognized Created (UTC) format: {created_raw}")
+                    continue
+
+                date_part, time_part = match.groups()
+                txn_date = datetime.strptime(date_part, "%Y-%m-%d")
+
+                if not earliest_date or txn_date < earliest_date:
+                    earliest_date = txn_date
+                if not latest_date or txn_date > latest_date:
+                    latest_date = txn_date
+
+                date_out = txn_date.strftime("%m/%d/%Y")
+                time_out = time_part
+
+            except Exception as e:
+                print(f"⚠️ Error parsing Created (UTC): {e} | value: {created_raw}")
+                continue
+
             currency = row.get("Currency", "")
             gross = float(row.get("Amount", "0").replace(",", "."))
             fee = float(row.get("Fee", "0").replace(",", ".")) if row.get("Fee") else 0.0
             net = float(row.get("Net", "0").replace(",", "."))
-
-            date_part, time_part = created.split(" ")
-            date_out = datetime.strptime(date_part, "%Y-%m-%d").strftime("%m/%d/%Y")
-            time_out = time_part[:5]
 
             grossF = f"{gross:.2f}".replace(".", ",")
             feeF = f"{fee:.2f}".replace(".", ",")
@@ -107,9 +133,15 @@ async def convert_stripe_bank(files: list[UploadFile] = File(...)):
                 buyer_id, "", date_out, "", "", "", "", "", "", "", "", "", "", "", "", country, ""
             ])
 
+        # Build dynamic filename
+        if earliest_date and latest_date:
+            filename_out = f"{earliest_date.strftime('%Y-%m-%d')}_to_{latest_date.strftime('%Y-%m-%d')}_drive2city.transactions@stripe.com.csv"
+        else:
+            filename_out = "converted_stripe.csv"
+
         output.seek(0)
         return StreamingResponse(output, media_type="text/csv", headers={
-            "Content-Disposition": "attachment; filename=converted_stripe.csv"
+            "Content-Disposition": f"attachment; filename={filename_out}"
         })
 
 @router.post("/convert/zasilkovna")
@@ -117,6 +149,8 @@ async def convert_zasilkovna(files: list[UploadFile] = File(...)):
     with tempfile.TemporaryDirectory() as tempdir:
         output_dir = os.path.join(tempdir, "converted")
         os.makedirs(output_dir, exist_ok=True)
+
+        date_list = []
 
         # Step 1: Process uploaded files
         for file in files:
@@ -126,12 +160,33 @@ async def convert_zasilkovna(files: list[UploadFile] = File(...)):
                     for name in zf.namelist():
                         if name.endswith(".csv"):
                             content = zf.read(name).decode("utf-8-sig")
-                            process_zasilkovna_csv(content, name, output_dir)
+                            result = process_zasilkovna_csv(content, name, output_dir)
+                            if result:
+                                _, date_str = result
+                                if date_str and date_str != "unknown":
+                                    date_list.append(date_str)
             elif file.filename.endswith(".csv"):
                 content = (await file.read()).decode("utf-8-sig")
-                process_zasilkovna_csv(content, file.filename, output_dir)
+                result = process_zasilkovna_csv(content, file.filename, output_dir)
+                if result:
+                    _, date_str = result
+                    if date_str and date_str != "unknown":
+                        date_list.append(date_str)
 
-        # Step 2: Zip all converted files
+        # Step 2: Calculate min/max dates
+        if date_list:
+            try:
+                date_objs = [datetime.strptime(d, "%Y-%m-%d") for d in date_list]
+                min_date = min(date_objs).strftime("%Y-%m-%d")
+                max_date = max(date_objs).strftime("%Y-%m-%d")
+                zip_filename = f"{min_date}_to_{max_date}_dobirky@zasilkovna.zip"
+            except Exception as e:
+                print(f"⚠️ Error parsing date range: {e}")
+                zip_filename = "dobirky@zasilkovna.zip"
+        else:
+            zip_filename = "dobirky@zasilkovna.zip"
+
+        # Step 3: Zip all converted files
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zf:
             for fname in os.listdir(output_dir):
@@ -140,12 +195,11 @@ async def convert_zasilkovna(files: list[UploadFile] = File(...)):
 
         zip_buffer.seek(0)
         return StreamingResponse(zip_buffer, media_type="application/zip", headers={
-            "Content-Disposition": "attachment; filename=converted_zasilkovna.zip"
+            "Content-Disposition": f"attachment; filename={zip_filename}"
         })
 
 @router.post("/convert/stripe-invoices")
 async def convert_stripe_invoices(files: list[UploadFile] = File(...)):
-    
     extracted_csvs = []
     for file in files:
         if file.filename.endswith(".csv"):
@@ -157,6 +211,7 @@ async def convert_stripe_invoices(files: list[UploadFile] = File(...)):
 
     root = ET.Element('winstrom', version='1.0')
     invoice_counter = 1
+    invoice_rows = []
 
     for filename, content in extracted_csvs:
         try:
@@ -176,69 +231,95 @@ async def convert_stripe_invoices(files: list[UploadFile] = File(...)):
 
                 invoice_date_str = row['Date (UTC)'].split()[0]
                 invoice_date = datetime.strptime(invoice_date_str, '%Y-%m-%d')
-                invoice_date_iso = invoice_date.strftime('%Y-%m-%d')
-                amount_due = row["Amount Due"]
-                original_InvNumber = row['Number']
-                var_sym = re.sub(r'\D', '', original_InvNumber)
 
-                # Lookup country code from name
-                country_name = row.get('Customer Address Country', '').strip()
-                country_code = country_name
-
-                payment_method = "Platební brána Stripe (karta)" if row['Charge'] else "PayPal"
-
-                invoice = ET.Element('faktura-vydana')
-                ET.SubElement(invoice, "id").text = f"ext:STRIPE-D2C-InvCreate:{invoice_counter}"
-                ET.SubElement(invoice, "cisDosle").text = row['Number']
-                ET.SubElement(invoice, "varSym").text = var_sym
-                ET.SubElement(invoice, "kod").text = f"FP-D2C_{invoice_counter:06d}/23"
-                ET.SubElement(invoice, "datVyst").text = invoice_date_iso
-                ET.SubElement(invoice, "datSplat").text = invoice_date_iso
-                ET.SubElement(invoice, "popis").text = "DRIVE2.CITY Route Planner"
-                ET.SubElement(invoice, "poznamka").text = f"Status Stripe: {row['Status']}\nStripe číslo faktury došlé: {row['Number']}"
-                ET.SubElement(invoice, "uvodTxt").text = (
-                    f"Status Stripe: {row['Status']}\nStripe číslo faktury došlé: {row['Number']}\n"
-                    f"Platební metoda: {payment_method}\nIdentifikace platby (Stripe Charge Id): {row['Charge']}"
-                )
-                ET.SubElement(invoice, "zavTxt").text = f"{filename} / {row['Customer Email']}"
-                ET.SubElement(invoice, "sumOsvMen").text = amount_due
-                #ET.SubElement(invoice, "sumCelkemMen").text = amount_due
-                ET.SubElement(invoice, "nazFirmy").text = row['Customer Email']
-                ET.SubElement(invoice, "postovniShodna").text = "true"
-                ET.SubElement(invoice, "bezPolozek").text = "true"
-                ET.SubElement(invoice, "ucetni").text = "true"
-                ET.SubElement(invoice, "zuctovano").text = "true"
-                ET.SubElement(invoice, "stitky").text = ""
-                ET.SubElement(invoice, "typDokl").text = "code:FAKTURA-PB"
-                ET.SubElement(invoice, "mena").text = "code:EUR"
-                ET.SubElement(invoice, "stat").text = f"code:{country_code}"
-                ET.SubElement(invoice, "formaUhradyCis").text = "code:KARTA"
-                ET.SubElement(invoice, "typUcOp").text = "code:TRŽBA SLUŽBY"
-
-                root.append(invoice)
-                invoice_counter += 1
-
+                invoice_rows.append({
+                    "filename": filename,
+                    "row": row,
+                    "date": invoice_date
+                })
             except Exception as e:
-                print(f"Error processing row in {filename}: {e}\nRow: {row}")
+                print(f"⚠️ Error parsing row in {filename}: {e}")
                 continue
 
+    # Sort by newest first
+    invoice_rows.sort(key=lambda x: x["date"]) #reverse=True to change the order
+
+    for invoice_entry in invoice_rows:
+        row = invoice_entry["row"]
+        filename = invoice_entry["filename"]
+        invoice_date = invoice_entry["date"]
+
+        try:
+            invoice_date_iso = invoice_date.strftime('%Y-%m-%d')
+            amount_due = row["Amount Due"]
+            original_InvNumber = row['Number']
+            var_sym = re.sub(r'\D', '', original_InvNumber)
+
+            country_name = row.get('Customer Address Country', '').strip()
+            country_code = country_name
+
+            has_charge = bool(row["Charge"])
+            payment_method = "Platební brána Stripe (karta)" if has_charge else "PayPal"
+            forma_code = "KARTA" if has_charge else "PAYPAL"
+
+            invoice = ET.Element('faktura-vydana')
+            ET.SubElement(invoice, "id").text = f"ext:STRIPE-D2C-InvCreate:{invoice_counter}"
+            ET.SubElement(invoice, "cisDosle").text = row['Number']
+            ET.SubElement(invoice, "varSym").text = var_sym
+            ET.SubElement(invoice, "kod").text = f"FP-D2C_{invoice_counter:06d}/23"
+            ET.SubElement(invoice, "datVyst").text = invoice_date_iso
+            ET.SubElement(invoice, "datSplat").text = invoice_date_iso
+            ET.SubElement(invoice, "popis").text = "DRIVE2.CITY Route Planner"
+            ET.SubElement(invoice, "poznamka").text = f"Status Stripe: {row['Status']}\nStripe číslo faktury došlé: {row['Number']}"
+            ET.SubElement(invoice, "uvodTxt").text = (
+                f"Status Stripe: {row['Status']}\nStripe číslo faktury došlé: {row['Number']}\n"
+                f"Platební metoda: {payment_method}\nIdentifikace platby (Stripe Charge Id): {row['Charge']}"
+            )
+            ET.SubElement(invoice, "zavTxt").text = f"{filename} / {row['Customer Email']}"
+            ET.SubElement(invoice, "sumOsvMen").text = amount_due
+            ET.SubElement(invoice, "nazFirmy").text = row['Customer Email']
+            ET.SubElement(invoice, "postovniShodna").text = "true"
+            ET.SubElement(invoice, "bezPolozek").text = "true"
+            ET.SubElement(invoice, "ucetni").text = "true"
+            ET.SubElement(invoice, "zuctovano").text = "true"
+            ET.SubElement(invoice, "stitky").text = ""
+            ET.SubElement(invoice, "typDokl").text = "code:FAKTURA-PB"
+            ET.SubElement(invoice, "mena").text = "code:EUR"
+            ET.SubElement(invoice, "stat").text = f"code:{country_code}"            
+            ET.SubElement(invoice, "formaUhradyCis").text = f"code:{forma_code}"
+            ET.SubElement(invoice, "typUcOp").text = "code:TRŽBA SLUŽBY"
+
+            root.append(invoice)
+            invoice_counter += 1
+
+        except Exception as e:
+            print(f"⚠️ Error building invoice XML for row: {e}")
+            continue
+
+    # Write XML to memory
     buffer = io.BytesIO()
     tree = ET.ElementTree(root)
     tree.write(buffer, encoding='utf-8', xml_declaration=True)
     buffer.seek(0)
 
+    # Build filename with date range
+    if invoice_rows:
+        min_date = min(r["date"] for r in invoice_rows).strftime("%Y-%m-%d")
+        max_date = max(r["date"] for r in invoice_rows).strftime("%Y-%m-%d")
+        filename = f"{min_date}_to_{max_date}_drive2city_invoicesstripe.xml"
+    else:
+        filename = "drive2city_invoicesstripe.xml"
+
     response = StreamingResponse(buffer, media_type="application/xml")
-    response.headers["Content-Disposition"] = "attachment; filename=invoice_export.xml"
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
     response.headers["X-Invoice-Count"] = str(invoice_counter - 1)
     return response
 
 @router.post("/convert/dph-cz")
 async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
-   
     invoice_counter = 1
     tempdir = tempfile.mkdtemp()
-    output_plain = os.path.join(tempdir, "interni_doklady.xml")
-    output_attached = os.path.join(tempdir, "interni_doklady_with_attachments.xml")
+    doklady_with_dates = []
 
     def safe_text(val):
         return str(val).strip() if val else ""
@@ -268,7 +349,7 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
 
     def build_doklad_xml(root, with_attachments=False, filename=None, original_p7s_content=None, decoded_xml_string=None):
         nonlocal invoice_counter
-        winstrom = ET.Element("winstrom", version="1.0")
+        doklady = []
 
         for doc in root.findall(".//DPHDP3"):
             vetaD = doc.find("VetaD")
@@ -302,7 +383,6 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
             if with_attachments:
                 prilohy = ET.SubElement(doklad, "prilohy")
 
-                # ⬅️ Add original p7s
                 if original_p7s_content and filename:
                     encoded_p7s = base64.b64encode(original_p7s_content).decode("utf-8")
                     p = ET.SubElement(prilohy, "priloha")
@@ -311,7 +391,6 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
                     content_el = ET.SubElement(p, "content", encoding="base64")
                     content_el.text = encoded_p7s
 
-                # ⬅️ Add decoded XML as attachment
                 if decoded_xml_string and filename:
                     encoded_xml = base64.b64encode(decoded_xml_string.encode("utf-8")).decode("utf-8")
                     p = ET.SubElement(prilohy, "priloha")
@@ -320,21 +399,14 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
                     content_el = ET.SubElement(p, "content", encoding="base64")
                     content_el.text = encoded_xml
 
-                # ⬅️ Process ObecnaPriloha
                 for priloha in root.findall(".//ObecnaPriloha"):
                     fname = safe_text(priloha.get("jm_souboru", "priloha.pdf"))
                     data = priloha.text
                     kodovani = priloha.get("kodovani", "").lower()
-
                     if not data:
                         continue
-
                     try:
-                        if kodovani == "base64":
-                            binary = base64.b64decode(data)
-                        else:
-                            # Fallback to hex (legacy case or incorrect metadata)
-                            binary = bytes.fromhex(data)
+                        binary = base64.b64decode(data) if kodovani == "base64" else bytes.fromhex(data)
                     except Exception as e:
                         print(f"⚠️ Failed to decode attachment {fname}: {e}")
                         continue
@@ -349,13 +421,13 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
                     content_el = ET.SubElement(p, "content", encoding="base64")
                     content_el.text = encoded
 
-            winstrom.append(doklad)
+            doklady.append(((podani_date, int(rok), int(mesic)), doklad))
             invoice_counter += 1
 
-        return winstrom
+        return doklady
 
-    plain_root = ET.Element("winstrom", version="1.0")
     attached_root = ET.Element("winstrom", version="1.0")
+    all_doklady = []
 
     for file in files:
         try:
@@ -365,52 +437,39 @@ async def convert_dph_confirmation(files: list[UploadFile] = File(...)):
             if not content:
                 continue
 
-            # Save original prettified XML
-            readable_path = os.path.join(tempdir, f"original__{name.replace('.p7s', '')}.xml")
-            try:
-                pretty = xml.dom.minidom.parseString(content).toprettyxml(indent="  ")
-                with open(readable_path, "w", encoding="utf-8") as f_out:
-                    f_out.write(pretty)
-            except Exception:
-                with open(readable_path, "w", encoding="utf-8") as f_out:
-                    f_out.write(content)
-
             inner_root, decoded_str = extract_inner_xml(content)
-
-            # Save decoded version
-            decoded_filename = f"decoded__{name.replace('.p7s', '')}.xml"
-            decoded_path = os.path.join(tempdir, decoded_filename)
-            with open(decoded_path, "w", encoding="utf-8") as f:
-                f.write(xml.dom.minidom.parseString(decoded_str).toprettyxml(indent="  "))
-
-            # Add doklad entries
-            for el in build_doklad_xml(inner_root, with_attachments=False):
-                plain_root.append(el)
-            for el in build_doklad_xml(inner_root, with_attachments=True, filename=name, original_p7s_content=raw, decoded_xml_string=decoded_str):
-                attached_root.append(el)
+            doklady = build_doklad_xml(inner_root, with_attachments=True, filename=name, original_p7s_content=raw, decoded_xml_string=decoded_str)
+            all_doklady.extend(doklady)
 
         except Exception as e:
             print(f"Skipping {file.filename}: {e}")
             continue
 
-    # Save both XMLs
-    ET.ElementTree(plain_root).write(output_plain, encoding="utf-8", xml_declaration=True)
-    ET.ElementTree(attached_root).write(output_attached, encoding="utf-8", xml_declaration=True)
+    all_doklady.sort(key=lambda x: (x[0][0], x[0][1], x[0][2]))  # podani_date, rok, mesic
+    for _, doklad in all_doklady:
+        attached_root.append(doklad)
 
-    # Zip it all
-    zip_path = os.path.join(tempdir, "converted_dph.zip")
+    if all_doklady:
+        min_date = min(d[0][0] for d in all_doklady).strftime("%Y-%m-%d")
+        max_date = max(d[0][0] for d in all_doklady).strftime("%Y-%m-%d")
+        prefix = f"{min_date}_to_{max_date}__"
+    else:
+        prefix = ""
+
+    xml_filename = f"{prefix}interni_doklady_with_attachments.xml"
+    zip_filename = f"{prefix}converted_dph.zip"
+    xml_path = os.path.join(tempdir, xml_filename)
+    zip_path = os.path.join(tempdir, zip_filename)
+
+    ET.ElementTree(attached_root).write(xml_path, encoding="utf-8", xml_declaration=True)
+
     with zipfile.ZipFile(zip_path, "w") as zipf:
-        zipf.write(output_plain, arcname="interni_doklady.xml")
-        zipf.write(output_attached, arcname="interni_doklady_with_attachments.xml")
+        zipf.write(xml_path, arcname=xml_filename)
 
-        for fname in os.listdir(tempdir):
-            if fname.startswith("decoded__") or fname.startswith("original__"):
-                zipf.write(os.path.join(tempdir, fname), arcname=fname)
-
-    return FileResponse(zip_path, filename="converted_dph.zip", media_type="application/zip")
+    return FileResponse(zip_path, filename=zip_filename, media_type="application/zip")
 
 
-def process_zasilkovna_csv(content: str, original_filename: str, output_dir: str):
+def process_zasilkovna_csv(content: str, original_filename: str, output_dir: str) -> tuple[str, str]:
     reference_id = os.path.splitext(original_filename)[0]
 
     reader = csv.reader(io.StringIO(content), delimiter=";")
@@ -503,7 +562,7 @@ def process_zasilkovna_csv(content: str, original_filename: str, output_dir: str
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(output.getvalue())
 
-    return output_filename
+    return output_filename, extracted_date  # return date too
 
 def format_decimal(val):
     return f"{val:.2f}".replace(".", ",")

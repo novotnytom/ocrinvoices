@@ -67,17 +67,18 @@ function ConverterPage() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download =
-                conversionType === "zasilkovna"
-                    ? "converted_zasilkovna.zip"
-                    : conversionType === "stripe-invoices"
-                        ? "stripe_invoices.xml"
-                        : conversionType === "dph-cz"
-                            ? "converted_dph.zip"
-                            : "converted_stripe.csv";
 
+            let filename = "converted_file.csv";
+            const disposition = response.headers.get("Content-Disposition");
+            if (disposition) {
+                const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (match) filename = match[1].replace(/['"]/g, '');
+            }
+
+            link.download = filename;
             link.click();
             window.URL.revokeObjectURL(url);
+
 
             // ✅ show toast or alert
             if (invoiceCount) {
