@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import ocr, profiles, process_zip, invoice_queue, export_template, overview, backup, converters
+from routers import ocr, profiles, process_zip, invoice_queue, export_template, overview, backup, converters, bank
 
 
 app = FastAPI()
@@ -24,3 +24,4 @@ app.include_router(export_template.router, prefix="/export-template", tags=["Exp
 app.include_router(overview.router)
 app.include_router(backup.router)
 app.include_router(converters.router)
+app.include_router(bank.router)

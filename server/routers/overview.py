@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Query
 from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.responses import Response
@@ -46,6 +46,15 @@ def save_invoice(invoice: dict):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(invoice, f, indent=2, ensure_ascii=False)
     return {"status": "saved"}
+
+@router.get("/overview/get_invoice")
+def get_invoice(id: str = Query(...)):
+    path = f"data/overview/{id}.json"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 @router.delete("/overview/delete/{id}")
 def delete_invoice(id: str):

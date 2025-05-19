@@ -7,6 +7,7 @@ import InvoiceQueueListPage from './pages/InvoiceQueueListPage';
 import GeneralInvoiceSetup from './pages/GeneralInvoiceSetup';
 import GeneralOverviewPage from './pages/GeneralInvoiceOverview';
 import ConverterPage from './pages/ConverterPage';
+import BankMatchPage from './pages/BankMatchPage';
 import './App.css'
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/general-invc" element={<GeneralInvoiceSetup />} />
         <Route path="/general-overview" element={<GeneralOverviewPage />} />
         <Route path="/converter" element={<ConverterPage/>} />
+        <Route path="/bank" element={<BankMatchPage/>} />
       </Routes>
 
       

@@ -198,6 +198,12 @@ export function AppSidebar() {
                     <span>All Invoices to Export</span>
                   </a>
                 </SidebarMenuButton>
+                <SidebarMenuButton asChild>
+                  <a href="/bank">
+                    <ListOrdered className="w-4 h-4 mr-1" />
+                    <span>Invoice vs Bank Matching</span>
+                  </a>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -208,7 +214,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="text-xs text-muted-foreground p-4 border-t border-border space-y-1">
-        <div>Version: 0.1.2</div>
+        <div>Version: 0.2.1</div>
         <div>RPM-mobility s.r.o.</div>
         <div>Revoluční třída 232</div>
         <div>Nový Bydžov 504 01</div>
