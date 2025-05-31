@@ -275,25 +275,25 @@ export default function MainWorkflowPage() {
       const [, day, month, year] = parts;
       return `${year.length === 2 ? '20' + year : year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     };
-  
+
     const normalizeDecimal = (val: string): string => val.replace(',', '.');
-  
+
     const invoiceItemKeys = ["nazev", "cenaMj", "mnozMj", "szbDph", "slevaMnoz", "slevaPol", "slevaDokl"];
-  
+
     for (const [idx, page] of pages.entries()) {
       // Extract invoice items from zones (same logic as in export)
       const itemZones = (page.zones ?? []).filter(z => z.isItem);
       const grouped: Record<number, Record<string, string>> = {};
-  
+
       for (const zone of itemZones) {
         const row = zone.rowId ?? 0;
         if (!grouped[row]) grouped[row] = {};
         grouped[row][zone.propertyName.replace(/_r\d+$/, "")] =
           page.values?.[zone.propertyName] || "";
       }
-  
+
       const invoiceItems = Object.values(grouped);
-  
+
       // ✅ Normalize decimal values in invoice items
       invoiceItems.forEach(item => {
         invoiceItemKeys.forEach(key => {
@@ -302,31 +302,28 @@ export default function MainWorkflowPage() {
           }
         });
       });
-  
+
       // ✅ Filter values: exclude invoice item keys
       const nonItemValues = Object.fromEntries(
         Object.entries(page.values ?? {}).filter(
           ([key]) => !invoiceItemKeys.some(k => key.startsWith(k))
         )
       );
-  
+
       const values = { ...systemValues, ...nonItemValues };
-  
+
       // ✅ Normalize date fields in values
       ["datVyst", "datSplat"].forEach((key) => {
         if (values[key]) {
           values[key] = normalizeDate(values[key]);
         }
       });
-  
-      // ✅ Calculate total_value from invoiceItems
-      const total_value = invoiceItems.reduce((sum, item) => {
-        const cena = parseFloat(item.cenaMj || "0");
-        const mnoz = parseFloat(item.mnozMj || "0");
-        const dph = parseFloat(item.szbDph || "0");
-        return sum + cena * mnoz * (1 + dph / 100);
-      }, 0);
-  
+
+      const osvRaw = values.osv || "0";
+      const total_value = parseFloat(osvRaw.replace(/\s/g, "").replace(",", "."));
+
+
+
       // Final payload
       const fullInvoice = {
         id: uuidv4(),
@@ -344,7 +341,7 @@ export default function MainWorkflowPage() {
         invoice_number: page.values[invoiceNumberField] || "",
         total_value: total_value,
       };
-  
+
       // Send to backend
       await fetch("http://localhost:8000/overview/save_invoice", {
         method: "POST",
@@ -352,10 +349,10 @@ export default function MainWorkflowPage() {
         body: JSON.stringify(fullInvoice),
       });
     }
-  
+
     alert("Propagation to overview completed!");
   };
- 
+
 
   return (
     <DashboardLayout>
@@ -436,7 +433,7 @@ export default function MainWorkflowPage() {
               if (property) setHighlightedZone({ pageIndex: i, property });
               else setHighlightedZone(null);
             }}
-            onOCRPage={() => handleOCRPage(i)}            
+            onOCRPage={() => handleOCRPage(i)}
             onDeleteItemRow={(rowId) => {
               setPages(prev => {
                 const updated = [...prev];

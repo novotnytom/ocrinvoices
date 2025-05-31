@@ -8,8 +8,13 @@ import uuid
 import xml.etree.ElementTree as ET
 import base64
 import mimetypes
+import re
 
 router = APIRouter()
+
+NUMERIC_TAGS = {
+    "sumCelkem", "osv", "sumCelkem_r1", "sumCelkem_r2", "total_value", "mnozMj", "cenaMj"
+}
 
 overview_path = "data/overview"
 os.makedirs(overview_path, exist_ok=True)
@@ -129,6 +134,21 @@ def export_selected(req: ExportRequest):
     xml_str = ET.tostring(root, encoding='utf-8')
     return Response(content=xml_str, media_type="application/xml")
 
+def clean_number(value: str) -> str:
+    """Clean string that looks like a number (spaces, commas, quotes)."""
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.replace('\xa0', '').replace(' ', '')   # Remove spaces
+    value = value.replace(',', '.')                      # Use dot as decimal separator
+    value = value.strip('"')                             # Remove surrounding quotes
+    return value
+
+def sanitize_xml_tree(root: ET.Element):
+    for elem in root.iter():
+        tag = elem.tag.split("}")[-1]  # Remove namespace if any
+        if tag in NUMERIC_TAGS and elem.text:
+            elem.text = clean_number(elem.text)
+
 @router.post("/overview/export_flexibee")
 def export_flexibee(selected_ids: List[str] = Body(...)):
     overview_dir = "data/overview"
@@ -144,7 +164,6 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
 
         values = invoice.get("values", {})
 
-        # Fallback logic: if datSplat missing/empty/zero, use datVyst
         dat_splat = values.get("datSplat", "").strip()
         if not dat_splat or dat_splat == "0":
             dat_vyst = values.get("datVyst")
@@ -160,10 +179,6 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
 
         for key, value in values.items():
             ET.SubElement(faktura, key).text = str(value)
-
-        # ET.SubElement(faktura, "ucetni").text = "true"
-        # ET.SubElement(faktura, "zuctovano").text = "true"
-        # ET.SubElement(faktura, "bezPolozek").text = "false"
 
         polozky = ET.SubElement(faktura, "polozkyFaktury")
         for item in items:
@@ -193,6 +208,9 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
                 ET.SubElement(priloha, "contentType").text = content_type
                 ET.SubElement(priloha, "content", attrib={"encoding": "base64"}).text = encoded
 
+    # 🧼 Sanitize numeric values in-place in XML tree
+    sanitize_xml_tree(winstrom)
+
+    # Export as string
     xml_str = ET.tostring(winstrom, encoding="utf-8", method="xml")
     return Response(content=xml_str, media_type="application/xml")
-
