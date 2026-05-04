@@ -122,7 +122,15 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <a href="/workflow">
                     <FileUp className="w-4 h-4 mr-1" />
-                    <span>Upload Batch (*.zip)</span>
+                    <span>Upload Batch (*.zip, *.pdf)</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="/vat-module">
+                    <FileUp className="w-4 h-4 mr-1" />
+                    <span>Upload Multi-Batch</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

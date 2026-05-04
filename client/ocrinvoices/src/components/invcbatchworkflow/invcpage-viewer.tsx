@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from 'react';
 import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva';
-import { Button } from '@/components/ui/button';
 import useImage from 'use-image';
 import ZoneResizeToolbar from './zone-resize-toolbar';
 
@@ -18,7 +17,7 @@ interface Zone {
 }
 
 interface PageViewerProps {
-  pageIndex: number;
+  pageIndex?: number;
   imageUrl: string;
   zones: Zone[];
   values: Record<string, string>;
@@ -27,6 +26,7 @@ interface PageViewerProps {
   onValueChange: (property: string, value: string) => void;
   onFocusZone: (property: string | null) => void;
   onOCRPage: () => void;  
+  onDeletePage: () => void;
   onDeleteItemRow: (rowId: number) => void;
   isLocked: boolean;
   onToggleLock: () => void;
@@ -35,7 +35,7 @@ interface PageViewerProps {
 }
 
 export default function PageViewer({
-  pageIndex,
+  pageIndex: _pageIndex,
   imageUrl,
   zones,
   values,
@@ -44,6 +44,7 @@ export default function PageViewer({
   onValueChange,
   onFocusZone,
   onOCRPage,  
+  onDeletePage,
   onDeleteItemRow,
   isLocked,
   onToggleLock,
@@ -182,16 +183,6 @@ export default function PageViewer({
                 stageRef.current.startDrag();
               }
             }}
-            onDragMove={(e) => {
-              const newX = e.target.x();
-              const newY = e.target.y();
-              const dx = newX - zone.x;
-              const dy = newY - zone.y;
-
-              setDeltaMove({ dx, dy, movedZoneId: zone.id });
-            }}
-
-
             style={{ border: '1px solid #ccc', cursor: 'grab' }}
           >
             <Layer>
@@ -220,7 +211,7 @@ export default function PageViewer({
                       const dy = newY - zone.y;
                       onZoneMove(zone.id, newX, newY);
                       if (!deltaMove) {
-                        setDeltaMove({ dx, dy });
+                        setDeltaMove({ dx, dy, movedZoneId: zone.id });
                       }
                     }}
                   />
@@ -277,6 +268,12 @@ export default function PageViewer({
                 disabled={isLocked}
               >
                 OCR This Page
+              </button>
+              <button
+                onClick={onDeletePage}
+                className="ml-2 bg-red-600 text-white text-xs px-3 py-1 rounded"
+              >
+                Delete This Page
               </button>
             </div>
           </div>

@@ -5,7 +5,6 @@ import TopPanel from '@/components/invcbatchworkflow/top-panel';
 import ZipUploader from '@/components/invcbatchworkflow/zip-uploader';
 import PageViewer from '@/components/invcbatchworkflow/invcpage-viewer';
 import Toolbox from '@/components/invcbatchworkflow/toolbox';
-import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
 
@@ -16,22 +15,28 @@ interface Zone {
   width: number;
   height: number;
   propertyName: string;
+  isItem?: boolean;
+  rowId?: number;
 }
 
 interface PageData {
   filename: string;
   imageUrl: string;
+  baseZones: Zone[];
   zones: Zone[];
   values: Record<string, string>;
   isLocked?: boolean;
   invoiceDateField?: string;
   invoiceNumberField?: string;
   totalValueField?: string;
+  documentWidth: number;
+  templateWidth: number | null;
+  pageScaleMultiplier: number;
 }
 
 
 export default function MainWorkflowPage() {
-  const [zipFileName, setZipFileName] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState('');
   const [profiles, setProfiles] = useState<string[]>([]);
   const [selectedProfile, setSelectedProfile] = useState('');
   const [batchName, setBatchName] = useState('');
@@ -45,6 +50,108 @@ export default function MainWorkflowPage() {
   const [searchParams] = useSearchParams();
   const queueName = searchParams.get('queue');
   const isEditing = !!queueName;
+
+  const normalizeZones = (zones: any[]): Zone[] => {
+    return zones.map((zone) => ({
+      ...zone,
+      x: Number(zone.x),
+      y: Number(zone.y),
+      width: Number(zone.width),
+      height: Number(zone.height),
+    }));
+  };
+
+  const getEffectiveTemplateWidth = (documentWidth: number, templateWidth: number | null | undefined) => {
+    if (templateWidth && templateWidth > 0) {
+      return templateWidth;
+    }
+    return documentWidth > 0 ? documentWidth : 1;
+  };
+
+  const scaleZonesForPage = (
+    baseZones: Zone[],
+    documentWidth: number,
+    templateWidth: number | null | undefined,
+    pageScaleMultiplier: number
+  ): Zone[] => {
+    const safeTemplateWidth = getEffectiveTemplateWidth(documentWidth, templateWidth);
+    const effectiveScale = (documentWidth / safeTemplateWidth) * pageScaleMultiplier;
+
+    return baseZones.map((zone) => ({
+      ...zone,
+      x: Math.round(zone.x * effectiveScale),
+      y: Math.round(zone.y * effectiveScale),
+      width: Math.round(zone.width * effectiveScale),
+      height: Math.round(zone.height * effectiveScale),
+    }));
+  };
+
+  const getTemplateVersionBaseName = (profileName: string) => {
+    return profileName.replace(/_v\d+$/, '');
+  };
+
+  const getNextTemplateVersionName = (profileName: string) => {
+    const baseName = getTemplateVersionBaseName(profileName);
+    const versionPattern = new RegExp(`^${baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}_v(\\d+)$`);
+    let maxVersion = profiles.includes(baseName) ? 1 : 0;
+
+    profiles.forEach((existingProfile) => {
+      const match = existingProfile.match(versionPattern);
+      if (!match) return;
+      const version = Number(match[1]);
+      if (Number.isFinite(version)) {
+        maxVersion = Math.max(maxVersion, version);
+      }
+    });
+
+    return `${baseName}_v${Math.max(2, maxVersion + 1)}`;
+  };
+
+  const buildPageState = (
+    rawPage: any,
+    templateWidthOverride?: number | null
+  ): PageData => {
+    const baseZones = normalizeZones(rawPage.zones || []);
+    const documentWidth = Number(rawPage.documentWidth || 0);
+    const templateWidth = templateWidthOverride ?? (rawPage.templateWidth != null ? Number(rawPage.templateWidth) : null);
+    const pageScaleMultiplier = Number(rawPage.pageScaleMultiplier ?? 1);
+
+    return {
+      ...rawPage,
+      baseZones,
+      zones: scaleZonesForPage(baseZones, documentWidth, templateWidth, pageScaleMultiplier),
+      isLocked: false,
+      documentWidth,
+      templateWidth,
+      pageScaleMultiplier,
+    };
+  };
+
+  const buildPageFromTemplate = (
+    currentPage: PageData,
+    baseZones: Zone[],
+    templateWidth: number | null
+  ): PageData => {
+    const pageScaleMultiplier = currentPage.pageScaleMultiplier ?? 1;
+
+    return {
+      ...currentPage,
+      baseZones,
+      zones: scaleZonesForPage(baseZones, currentPage.documentWidth, templateWidth, pageScaleMultiplier),
+      values: {},
+      templateWidth,
+      pageScaleMultiplier,
+    };
+  };
+
+  const loadImageDimensions = (src: string): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+      const image = new window.Image();
+      image.onload = () => resolve({ width: image.width, height: image.height });
+      image.onerror = () => reject(new Error('Unable to load image dimensions'));
+      image.src = src;
+    });
+  };
 
   useEffect(() => {
     const loadProfiles = async () => {
@@ -63,21 +170,21 @@ export default function MainWorkflowPage() {
       const data = await res.json();
 
       if (data && data.zones) {
-        setPropertyNames(data.zones.map((z: any) => z.propertyName));
-      }
+        const names = data.zones.map((z: any) => z.propertyName);
+        setPropertyNames(names);
 
-      // Suggest common mappings only if not already selected
-      if (!invoiceDateField) {
-        const match = propertyNames.find(p => p.toLowerCase().includes("dat"));
-        if (match) setInvoiceDateField(match);
-      }
-      if (!invoiceNumberField) {
-        const match = propertyNames.find(p => p.toLowerCase().includes("cis"));
-        if (match) setInvoiceNumberField(match);
-      }
-      if (!totalValueField) {
-        const match = propertyNames.find(p => p.toLowerCase().includes("celk"));
-        if (match) setTotalValueField(match);
+        if (!invoiceDateField) {
+          const match = names.find((p: string) => p.toLowerCase().includes("dat"));
+          if (match) setInvoiceDateField(match);
+        }
+        if (!invoiceNumberField) {
+          const match = names.find((p: string) => p.toLowerCase().includes("cis"));
+          if (match) setInvoiceNumberField(match);
+        }
+        if (!totalValueField) {
+          const match = names.find((p: string) => p.toLowerCase().includes("celk"));
+          if (match) setTotalValueField(match);
+        }
       }
 
       // load system fields from export-template
@@ -100,16 +207,27 @@ export default function MainWorkflowPage() {
     const loadQueue = async () => {
       const res = await fetch(`http://localhost:8000/queues/${queueName}`);
       const data = await res.json();
+      const profileRes = await fetch(`http://localhost:8000/profiles/${data.profile}`);
+      const profileData = await profileRes.json();
+      const templateWidth = profileData?.templateWidth != null ? Number(profileData.templateWidth) : null;
 
       setSelectedProfile(data.profile);
       setBatchName(data.name || queueName);
-      setPages(data.pages.map((p: any) => ({
-        filename: p.filename,
-        imageUrl: `/queues/${queueName}/${p.filename}`,
-        zones: p.zones,
-        values: p.values || {},
-        isLocked: false
-      })));
+      setPropertyNames((profileData?.zones || []).map((z: any) => z.propertyName));
+      const pagesWithDimensions = await Promise.all(data.pages.map(async (p: any) => {
+        const imageUrl = `/queues/${queueName}/${p.filename}`;
+        const dimensions = await loadImageDimensions(`http://localhost:8000${imageUrl}`);
+        return buildPageState({
+          filename: p.filename,
+          imageUrl,
+          zones: p.zones,
+          values: p.values || {},
+          documentWidth: dimensions.width,
+          templateWidth,
+          pageScaleMultiplier: 1,
+        }, templateWidth);
+      }));
+      setPages(pagesWithDimensions);
       setSystemValues(data.systemValues || {});
       if (data.fieldMapping) {
         setInvoiceDateField(data.fieldMapping.invoiceDateField || "");
@@ -125,22 +243,27 @@ export default function MainWorkflowPage() {
     const file = e.target.files?.[0];
     if (!file || !selectedProfile) return;
 
-    setZipFileName(file.name); // <--- Track the file name
+    setUploadedFileName(file.name);
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
     const formData = new FormData();
-    formData.append('zip', file);
+    formData.append(isPdf ? 'image' : 'zip', file);
     formData.append('profile', selectedProfile);
 
-    const res = await fetch('http://localhost:8000/process-zip', {
+    const res = await fetch(`http://localhost:8000/${isPdf ? 'process-image' : 'process-zip'}`, {
       method: 'POST',
       body: formData,
     });
 
+    if (!res.ok) {
+      const error = await res.json().catch(() => null);
+      alert(error?.detail || 'Error processing uploaded file.');
+      return;
+    }
+
     const data = await res.json();
-    setPages(data.pages.map((p: any) => ({
-      ...p,
-      isLocked: false
-    })));
+    setPages(data.pages.map((p: any) => buildPageState(p)));
   };
 
 
@@ -185,6 +308,18 @@ export default function MainWorkflowPage() {
     }
   };
 
+  const handleDeletePage = (pageIndex: number) => {
+    setPages((prev) => prev.filter((_, index) => index !== pageIndex));
+    setHighlightedZone((prev) => {
+      if (!prev) return null;
+      if (prev.pageIndex === pageIndex) return null;
+      if (prev.pageIndex > pageIndex) {
+        return { ...prev, pageIndex: prev.pageIndex - 1 };
+      }
+      return prev;
+    });
+  };
+
   const handleSaveQueue = async () => {
     if (!batchName || !selectedProfile || pages.length === 0) return;
 
@@ -222,6 +357,64 @@ export default function MainWorkflowPage() {
     } else {
       alert("Error saving queue");
     }
+  };
+
+  const handleSavePageAsTemplateVersion = async (pageIndex: number) => {
+    const page = pages[pageIndex];
+    if (!selectedProfile) {
+      alert('Please select a template before saving a new template version.');
+      return;
+    }
+
+    const newTemplateName = getNextTemplateVersionName(selectedProfile);
+    const formData = new FormData();
+    formData.append('name', newTemplateName);
+    formData.append('zones', JSON.stringify(page.zones));
+    formData.append('systemValues', JSON.stringify(systemValues || {}));
+
+    const imageRes = await fetch(`http://localhost:8000${page.imageUrl}`);
+    if (!imageRes.ok) {
+      alert('Unable to load page image for template save.');
+      return;
+    }
+
+    const imageBlob = await imageRes.blob();
+    formData.append('image', imageBlob, page.filename);
+
+    const saveRes = await fetch('http://localhost:8000/profiles/', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!saveRes.ok) {
+      alert('Error saving new template version.');
+      return;
+    }
+
+    setProfiles((prev) => {
+      const nextProfiles = new Set(prev);
+      nextProfiles.add(newTemplateName);
+      return Array.from(nextProfiles).sort((a, b) => a.localeCompare(b));
+    });
+    setSelectedProfile(newTemplateName);
+    await handleApplyTemplateToAllPages(newTemplateName);
+    alert(`Template saved as "${newTemplateName}".`);
+  };
+
+  const handleApplyTemplateToAllPages = async (profile: string) => {
+    if (!profile || pages.length === 0) return;
+
+    const res = await fetch(`http://localhost:8000/profiles/${profile}`);
+    const data = await res.json();
+    const baseZones = normalizeZones(data?.zones || []);
+    const templateWidth = data?.templateWidth != null ? Number(data.templateWidth) : null;
+
+    setSelectedProfile(profile);
+    setPropertyNames(baseZones.map((z: any) => z.propertyName));
+
+    setPages((prev) =>
+      prev.map((page) => buildPageFromTemplate(page, baseZones, templateWidth))
+    );
   };
 
   const handleExportJson = () => {
@@ -387,7 +580,8 @@ export default function MainWorkflowPage() {
           <ZipUploader
             onUpload={handleZipUpload}
             disabled={!selectedProfile}
-            fileName={zipFileName}
+            fileName={uploadedFileName}
+            allowPdf
           />
         )}
 
@@ -413,68 +607,128 @@ export default function MainWorkflowPage() {
 
 
         {pages.map((page, i) => (
-          <PageViewer
-            key={i}
-            pageIndex={i}
-            imageUrl={page.imageUrl}
-            zones={page.zones}
-            values={page.values}
-            referenceValues={i === 0 ? undefined : pages[0].values}
-            highlightProperty={highlightedZone?.pageIndex === i ? highlightedZone.property : null}
-            onZoneMove={(id, x, y) => updateZonePosition(i, id, x, y)}
-            onValueChange={(property, value) => {
-              setPages(prev => {
-                const updated = [...prev];
-                updated[i].values[property] = value;
-                return updated;
-              });
-            }}
-            onFocusZone={(property) => {
-              if (property) setHighlightedZone({ pageIndex: i, property });
-              else setHighlightedZone(null);
-            }}
-            onOCRPage={() => handleOCRPage(i)}
-            onDeleteItemRow={(rowId) => {
-              setPages(prev => {
-                const updated = [...prev];
-                const page = updated[i];
+          <div key={i} className="space-y-3">
+            <div className="bg-gray-100 p-4 rounded space-y-3">
+              <div className="flex items-center gap-4 text-sm">
+                <div>
+                  Auto width ratio:{' '}
+                  <span className="font-medium">
+                    {(
+                      page.documentWidth /
+                      getEffectiveTemplateWidth(page.documentWidth, page.templateWidth)
+                    ).toFixed(3)}
+                  </span>
+                </div>
+                <label className="flex items-center gap-2">
+                  <span>Page scale multiplier</span>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.01"
+                    value={page.pageScaleMultiplier}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (!Number.isFinite(value) || value <= 0) return;
 
-                page.zones = page.zones.filter(z => z.rowId !== rowId);
-                // Optionally also delete corresponding values
-                const remainingValues = { ...page.values };
-                page.zones.forEach(z => {
-                  if (!(z.propertyName in remainingValues)) {
-                    delete remainingValues[z.propertyName];
-                  }
+                      setPages((prev) => {
+                        const updated = [...prev];
+                        const currentPage = updated[i];
+                        updated[i] = {
+                          ...currentPage,
+                          pageScaleMultiplier: value,
+                          zones: scaleZonesForPage(
+                            currentPage.baseZones,
+                            currentPage.documentWidth,
+                            currentPage.templateWidth,
+                            value
+                          ),
+                        };
+                        return updated;
+                      });
+                    }}
+                    className="w-24 border p-2"
+                  />
+                </label>
+                <button
+                  onClick={() => handleSavePageAsTemplateVersion(i)}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                >
+                  Save as Template Version
+                </button>
+                <button
+                  onClick={() => handleApplyTemplateToAllPages(selectedProfile)}
+                  className="bg-slate-600 text-white px-3 py-1 rounded text-sm"
+                >
+                  Reload Template to All Pages
+                </button>
+              </div>
+            </div>
+
+            <PageViewer
+              key={i}
+              pageIndex={i}
+              imageUrl={page.imageUrl}
+              zones={page.zones}
+              values={page.values}
+              referenceValues={i === 0 ? undefined : pages[0].values}
+              highlightProperty={highlightedZone?.pageIndex === i ? highlightedZone.property : null}
+              onZoneMove={(id, x, y) => updateZonePosition(i, id, x, y)}
+              onValueChange={(property, value) => {
+                setPages(prev => {
+                  const updated = [...prev];
+                  updated[i].values[property] = value;
+                  return updated;
                 });
-                page.values = remainingValues;
+              }}
+              onFocusZone={(property) => {
+                if (property) setHighlightedZone({ pageIndex: i, property });
+                else setHighlightedZone(null);
+              }}
+              onOCRPage={() => handleOCRPage(i)}
+              onDeletePage={() => handleDeletePage(i)}
+              onDeleteItemRow={(rowId) => {
+                setPages(prev => {
+                  const updated = [...prev];
+                  const currentPage = updated[i];
+                  const newZones = currentPage.zones.filter(z => z.rowId !== rowId);
+                  const remainingValues = { ...currentPage.values };
+                  newZones.forEach(z => {
+                    if (!(z.propertyName in remainingValues)) {
+                      delete remainingValues[z.propertyName];
+                    }
+                  });
 
-                updated[i] = page;
-                return updated;
-              });
-            }}
-            isLocked={page.isLocked ?? false}
-            onToggleLock={() => {
-              setPages(prev => {
-                const updated = [...prev];
-                updated[i] = {
-                  ...updated[i],
-                  isLocked: !updated[i].isLocked,
-                };
-                return updated;
-              });
-            }}
-            onZoneChange={(newZones) => {
-              setPages(prev => {
-                const updated = [...prev];
-                updated[i] = {
-                  ...updated[i],
-                  zones: newZones,
-                };
-                return updated;
-              });
-            }}
-          />
+                  updated[i] = {
+                    ...currentPage,
+                    zones: newZones,
+                    values: remainingValues,
+                  };
+                  return updated;
+                });
+              }}
+              isLocked={page.isLocked ?? false}
+              onToggleLock={() => {
+                setPages(prev => {
+                  const updated = [...prev];
+                  updated[i] = {
+                    ...updated[i],
+                    isLocked: !updated[i].isLocked,
+                  };
+                  return updated;
+                });
+              }}
+              onZoneChange={(newZones) => {
+                setPages(prev => {
+                  const updated = [...prev];
+                  updated[i] = {
+                    ...updated[i],
+                    zones: newZones,
+                  };
+                  return updated;
+                });
+              }}
+            />
+          </div>
         ))}
 
       </div>

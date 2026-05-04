@@ -8,6 +8,7 @@ interface TopPanelProps {
   setBatchName: (v: string) => void;
   onSave: () => void;
   isEditing: boolean;
+  showSaveButton?: boolean;
   propertyNames: string[];
   invoices: any[];
   systemValues: Record<string, string>;
@@ -43,7 +44,8 @@ export default function TopPanel({
   invoiceNumberField,
   setInvoiceNumberField,
   totalValueField,
-  setTotalValueField
+  setTotalValueField,
+  showSaveButton = true
 }: TopPanelProps) {
 
   const canPropagate = Boolean(
@@ -89,12 +91,14 @@ export default function TopPanel({
             placeholder="Batch name"
             className="border p-2 flex-1"
           />
-          <button
-            onClick={onSave}
-            className="bg-purple-600 text-white px-4 py-2 rounded"
-          >
-            Save
-          </button>
+          {showSaveButton && (
+            <button
+              onClick={onSave}
+              className="bg-purple-600 text-white px-4 py-2 rounded"
+            >
+              Save
+            </button>
+          )}
         </div>
       </div>
 

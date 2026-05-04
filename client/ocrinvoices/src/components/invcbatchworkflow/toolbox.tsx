@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface ToolboxProps {
   onOCRAll: () => void;
   disabled?: boolean;

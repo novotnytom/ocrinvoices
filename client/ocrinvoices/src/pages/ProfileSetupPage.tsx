@@ -28,6 +28,8 @@ export default function ProfileSetupPage() {
   const [imageURL, setImageURL] = useState<string | null>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [ocrResults, setOcrResults] = useState<Record<string, string>>({});
+  const [systemFieldNames, setSystemFieldNames] = useState<string[]>([]);
+  const [systemValues, setSystemValues] = useState<Record<string, string>>({});
 
   const [zoneIdCounter, setZoneIdCounter] = useState(1);
   const [scale, setScale] = useState(1);
@@ -54,6 +56,7 @@ export default function ProfileSetupPage() {
         const maxId = (data.zones || []).reduce((max: number, z: Zone) => Math.max(max, z.id), 0);
         setZoneIdCounter(maxId + 1);
         setProfileName(data.name || paramName);
+        setSystemValues(data.systemValues || {});
 
         const imgRes = await fetch(`http://localhost:8000${data.image_url}`);
         const blob = await imgRes.blob();
@@ -69,13 +72,29 @@ export default function ProfileSetupPage() {
     loadProfile();
   }, [paramName]);
 
+  useEffect(() => {
+    const loadSystemFields = async () => {
+      const templateRes = await fetch("http://localhost:8000/export-template/load");
+      const templateFields = await templateRes.json();
+      const systemFields = templateFields
+        .filter((f: any) => f.system === true)
+        .map((f: any) => f.name);
+      setSystemFieldNames(systemFields);
+    };
+    loadSystemFields();
+  }, []);
+
+  useEffect(() => {
+    if (systemFieldNames.length === 0) return;
+    setSystemValues((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      return Object.fromEntries(systemFieldNames.map((name) => [name, ""]));
+    });
+  }, [systemFieldNames]);
+
   const handleImageUpload = (file: File) => {
     setImageFile(file);
     setImageURL(URL.createObjectURL(file));
-  };
-
-  const handleAddZone = () => {
-    setDrawingMode(true);
   };
 
   const handleUpdateZone = (id: number, propertyName: string) => {
@@ -154,6 +173,7 @@ export default function ProfileSetupPage() {
     formData.append("name", profileName);
     formData.append("image", imageFile);
     formData.append("zones", JSON.stringify(zones));
+    formData.append("systemValues", JSON.stringify(systemValues));
 
     try {
       const res = await fetch("http://localhost:8000/profiles/", {
@@ -223,6 +243,28 @@ export default function ProfileSetupPage() {
           <TemplateNameInput value={profileName} onChange={setProfileName} />
           <Button onClick={handleSave}>Save Template</Button>
         </div>
+
+        {systemFieldNames.length > 0 && (
+          <div className="bg-muted px-6 py-4 border-b border-border">
+            <h2 className="text-sm font-semibold mb-2">Optional System Fields (XML)</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {systemFieldNames.map((key) => (
+                <div key={key} className="flex items-center gap-2">
+                  <label className="text-xs w-32">{key}</label>
+                  <input
+                    type="text"
+                    className="border p-1 text-sm flex-1"
+                    value={systemValues?.[key] || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSystemValues((prev) => ({ ...prev, [key]: value }));
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {imageURL && (
           <CanvasToolbar
@@ -336,4 +378,3 @@ export default function ProfileSetupPage() {
     </DashboardLayout>
   );
 }
-

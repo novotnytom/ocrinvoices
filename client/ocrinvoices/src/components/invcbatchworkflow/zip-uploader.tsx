@@ -5,17 +5,28 @@ interface ZipUploaderProps {
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   fileName?: string;
+  allowPdf?: boolean;
 }
 
-export default function ZipUploader({ onUpload, disabled, fileName }: ZipUploaderProps) {
+export default function ZipUploader({ onUpload, disabled, fileName, allowPdf = false }: ZipUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const isAcceptedFile = (file: File) => {
+    if (file.type === 'application/zip' || file.name.toLowerCase().endsWith('.zip')) {
+      return true;
+    }
+    if (allowPdf && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+      return true;
+    }
+    return false;
+  };
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (disabled) return;
 
     const file = e.dataTransfer.files?.[0];
-    if (file?.type === 'application/zip' || file?.name.endsWith('.zip')) {
+    if (file && isAcceptedFile(file)) {
       const dataTransfer = new DataTransfer();
       dataTransfer.items.add(file);
 
@@ -29,14 +40,19 @@ export default function ZipUploader({ onUpload, disabled, fileName }: ZipUploade
 
       onUpload(event);
     }
-  }, [onUpload, disabled]);
+  }, [onUpload, disabled, allowPdf]);
 
   const preventDefault = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
+  const acceptedTypes = allowPdf
+    ? '.zip,.pdf,application/zip,application/pdf'
+    : '.zip,application/zip';
+  const uploadLabel = allowPdf ? '.zip or .pdf file' : '.zip file';
+  const uploadedLabel = allowPdf ? 'Uploaded file:' : 'Uploaded ZIP:';
 
   if (fileName) {
     return (
       <div className="p-4 bg-green-50 border border-green-300 rounded text-sm">
-        <strong>Uploaded ZIP:</strong> {fileName}
+        <strong>{uploadedLabel}</strong> {fileName}
       </div>
     );
   }
@@ -51,11 +67,11 @@ export default function ZipUploader({ onUpload, disabled, fileName }: ZipUploade
       }`}
       onClick={() => !disabled && fileInputRef.current?.click()}
     >
-      <p className="mb-2">Drag and drop your .zip file here, or click to upload</p>
+      <p className="mb-2">Drag and drop your {uploadLabel} here, or click to upload</p>
       <input
         ref={fileInputRef}
         type="file"
-        accept=".zip"
+        accept={acceptedTypes}
         disabled={disabled}
         onChange={onUpload}
         className="hidden"
