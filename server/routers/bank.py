@@ -4,38 +4,43 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Body
 from xml.etree import ElementTree as ET
 from typing import List
 from typing import Dict
+from pathlib import Path
+
+try:
+    from path_utils import BATCH_DIR
+except ImportError:
+    from server.path_utils import BATCH_DIR
 
 router = APIRouter()
 
-BATCH_DIR = "data/bank_batches"
-os.makedirs(BATCH_DIR, exist_ok=True)
+BATCH_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/bank/save_batch")
 def save_batch(name: str = Body(...), operations: List[dict] = Body(...)):
-    path = os.path.join(BATCH_DIR, f"{name}.json")
-    with open(path, "w", encoding="utf-8") as f:
+    path = BATCH_DIR / f"{Path(name).name}.json"
+    with path.open("w", encoding="utf-8") as f:
         json.dump(operations, f, ensure_ascii=False, indent=2)
     return {"status": "ok", "saved_as": name}
 
 @router.delete("/bank/delete_batch")
 def delete_batch(name: str):
-    path = os.path.join(BATCH_DIR, f"{name}.json")
-    if os.path.exists(path):
-        os.remove(path)
+    path = BATCH_DIR / f"{Path(name).name}.json"
+    if path.exists():
+        path.unlink()
         return {"status": "deleted", "name": name}
     raise HTTPException(status_code=404, detail="Batch not found")
 
 @router.get("/bank/list_batches")
 def list_batches():
-    files = [f.removesuffix(".json") for f in os.listdir(BATCH_DIR) if f.endswith(".json")]
+    files = [path.stem for path in BATCH_DIR.iterdir() if path.is_file() and path.suffix == ".json"]
     return {"batches": sorted(files)}
 
 @router.get("/bank/load_batch")
 def load_batch(name: str):
-    path = os.path.join(BATCH_DIR, f"{name}.json")
-    if not os.path.exists(path):
+    path = BATCH_DIR / f"{Path(name).name}.json"
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Batch not found")
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         operations = json.load(f)
     return {"operations": operations}
 
@@ -72,11 +77,11 @@ async def import_bank_xml(file: UploadFile = File(...)):
 
 @router.post("/bank/save_match")
 def save_match(bank_id: str = Body(...), invoice_id: str = Body(...), batch_name: str = Body(...)):
-    path = os.path.join(BATCH_DIR, f"{batch_name}.json")
-    if not os.path.exists(path):
+    path = BATCH_DIR / f"{Path(batch_name).name}.json"
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Bank batch not found")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         operations = json.load(f)
 
     updated = False
@@ -89,18 +94,18 @@ def save_match(bank_id: str = Body(...), invoice_id: str = Body(...), batch_name
     if not updated:
         raise HTTPException(status_code=404, detail="Bank operation not found")
 
-    with open(path, "w", encoding="utf-8") as f:
+    with path.open("w", encoding="utf-8") as f:
         json.dump(operations, f, ensure_ascii=False, indent=2)
 
     return {"status": "ok", "matched": {"bank_id": bank_id, "invoice_id": invoice_id}}
 
 @router.get("/bank/get_match_status")
 def get_match_status(bank_id: str, batch_name: str):
-    path = os.path.join(BATCH_DIR, f"{batch_name}.json")
-    if not os.path.exists(path):
+    path = BATCH_DIR / f"{Path(batch_name).name}.json"
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Bank batch not found")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         operations = json.load(f)
 
     for op in operations:
@@ -114,11 +119,11 @@ def save_initial_match(
     batch_name: str = Body(...),
     matches: Dict[str, str] = Body(...)
 ):
-    path = os.path.join(BATCH_DIR, f"{batch_name}.json")
-    if not os.path.exists(path):
+    path = BATCH_DIR / f"{Path(batch_name).name}.json"
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Bank batch not found")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
     updated = False
@@ -128,7 +133,7 @@ def save_initial_match(
             updated = True
 
     if updated:
-        with open(path, "w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     return {"status": "ok", "count": len(matches)}
@@ -139,11 +144,11 @@ def confirm_match(
     bank_id: str = Body(...),
     invoice_id: str = Body(...)
 ):
-    path = os.path.join(BATCH_DIR, f"{batch_name}.json")
-    if not os.path.exists(path):
+    path = BATCH_DIR / f"{Path(batch_name).name}.json"
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Bank batch not found")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
     updated = False
@@ -155,7 +160,7 @@ def confirm_match(
             break
 
     if updated:
-        with open(path, "w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return {"status": "ok", "confirmed": bank_id}
     else:
@@ -166,11 +171,11 @@ def delete_match(
     batch_name: str = Body(...),
     bank_id: str = Body(...)
 ):
-    path = os.path.join(BATCH_DIR, f"{batch_name}.json")
-    if not os.path.exists(path):
+    path = BATCH_DIR / f"{Path(batch_name).name}.json"
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Bank batch not found")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
     updated = False
@@ -182,9 +187,8 @@ def delete_match(
             break
 
     if updated:
-        with open(path, "w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return {"status": "ok", "cleared": bank_id}
     else:
         raise HTTPException(status_code=404, detail="Bank operation not found")
-

@@ -55,7 +55,7 @@ export default function PageViewer({
   referenceValues,
   onZoneChange,
 }: PageViewerProps) {
-  const [image] = useImage(`http://localhost:8000${imageUrl}`, 'anonymous');
+  const [image] = useImage(`http://localhost:8000${imageUrl}`);
   const [viewport, setViewport] = useState({ scale: 1, x: 0, y: 0 });
   const [deltaMove, setDeltaMove] = useState<{ dx: number; dy: number; movedZoneId: number } | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
@@ -64,6 +64,10 @@ export default function PageViewer({
   const stageRef = useRef<Konva.Stage | null>(null);
   const zonesRef = useRef(zones);
   const selectedPropertyRef = useRef<string | null>(null);
+
+  const isStageDragEvent = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    return e.target === e.currentTarget;
+  }, []);
 
   useEffect(() => {
     zonesRef.current = zones;
@@ -230,8 +234,9 @@ export default function PageViewer({
               setIsPanning(false);
             }}
             onDragMove={(e) => {
-              if (!isPanning) return;
-              const stage = e.target;
+              if (!isPanning || !isStageDragEvent(e)) return;
+              const stage = stageRef.current;
+              if (!stage) return;
               const stagePosition = stage.position();
               setViewport((prev) => ({
                 ...prev,
@@ -240,7 +245,9 @@ export default function PageViewer({
               }));
             }}
             onDragEnd={(e) => {
-              const stage = e.target;
+              if (!isStageDragEvent(e)) return;
+              const stage = stageRef.current;
+              if (!stage) return;
               const stagePosition = stage.position();
               setViewport((prev) => ({
                 ...prev,

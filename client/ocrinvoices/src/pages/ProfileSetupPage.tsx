@@ -52,7 +52,11 @@ export default function ProfileSetupPage() {
   const [hoveredZoneId, setHoveredZoneId] = useState<number | null>(null);
 
   const stageRef = useRef<Konva.Stage | null>(null);
-  const [image] = useImage(imageURL || '', 'anonymous');
+  const [image] = useImage(imageURL || '');
+
+  const isStageDragEvent = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    return e.target === e.currentTarget;
+  }, []);
 
   const fitToStage = useCallback(() => {
     const stage = stageRef.current;
@@ -369,8 +373,9 @@ export default function ProfileSetupPage() {
                   setIsPanning(false);
                 }}
                 onDragMove={(e) => {
-                  if (!isPanning) return;
-                  const stage = e.target;
+                  if (!isPanning || !isStageDragEvent(e)) return;
+                  const stage = stageRef.current;
+                  if (!stage) return;
                   const stagePosition = stage.position();
                   setViewport((prev) => ({
                     ...prev,
@@ -379,7 +384,9 @@ export default function ProfileSetupPage() {
                   }));
                 }}
                 onDragEnd={(e) => {
-                  const stage = e.target;
+                  if (!isStageDragEvent(e)) return;
+                  const stage = stageRef.current;
+                  if (!stage) return;
                   const stagePosition = stage.position();
                   setViewport((prev) => ({
                     ...prev,

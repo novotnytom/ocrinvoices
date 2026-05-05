@@ -167,6 +167,10 @@ export default function MainWorkflowPage() {
     });
   };
 
+  const buildQueueImageUrl = (queue: string, filename: string) => {
+    return `/queues/${encodeURIComponent(queue)}/${encodeURIComponent(filename)}`;
+  };
+
   useEffect(() => {
     const loadProfiles = async () => {
       const res = await fetch('http://localhost:8000/profiles');
@@ -232,7 +236,7 @@ export default function MainWorkflowPage() {
     if (!queueName) return;
 
     const loadQueue = async () => {
-      const res = await fetch(`http://localhost:8000/queues/${queueName}`);
+      const res = await fetch(`http://localhost:8000/queues/${encodeURIComponent(queueName)}`);
       const data = await res.json();
       const profileRes = await fetch(`http://localhost:8000/profiles/${data.profile}`);
       const profileData = await profileRes.json();
@@ -242,7 +246,7 @@ export default function MainWorkflowPage() {
       setBatchName(data.name || queueName);
       setPropertyNames((profileData?.zones || []).map((z: any) => z.propertyName));
       const pagesWithDimensions = await Promise.all(data.pages.map(async (p: any) => {
-        const imageUrl = `/queues/${queueName}/${p.filename}`;
+        const imageUrl = buildQueueImageUrl(queueName, p.filename);
         const dimensions = await loadImageDimensions(`http://localhost:8000${imageUrl}`);
         return buildPageState({
           filename: p.filename,

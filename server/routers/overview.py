@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Body, Query
 from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.responses import Response, StreamingResponse
-import os
 import json
 import uuid
 import xml.etree.ElementTree as ET
@@ -11,6 +10,12 @@ import mimetypes
 import re
 import io
 import zipfile
+from pathlib import Path
+
+try:
+    from path_utils import DATA_DIR, QUEUE_DIR, PROFILE_DIR
+except ImportError:
+    from server.path_utils import DATA_DIR, QUEUE_DIR, PROFILE_DIR
 
 router = APIRouter()
 
@@ -18,8 +23,8 @@ NUMERIC_TAGS = {
     "sumCelkem", "osv", "sumCelkem_r1", "sumCelkem_r2", "total_value", "mnozMj", "cenaMj"
 }
 
-overview_path = "data/overview"
-os.makedirs(overview_path, exist_ok=True)
+OVERVIEW_DIR = DATA_DIR / "overview"
+OVERVIEW_DIR.mkdir(parents=True, exist_ok=True)
 
 class OverviewInvoice(BaseModel):
     id: str
@@ -38,8 +43,8 @@ class OverviewInvoice(BaseModel):
 @router.post("/overview/add_batch")
 def add_batch(invoices: List[OverviewInvoice]):
     for inv in invoices:
-        file_path = os.path.join(overview_path, f"{inv.id}.json")
-        with open(file_path, 'w') as f:
+        file_path = OVERVIEW_DIR / f"{Path(inv.id).name}.json"
+        with file_path.open('w', encoding="utf-8") as f:
             json.dump(inv.dict(), f)
     return {"status": "Batch added", "count": len(invoices)}
 
@@ -49,65 +54,65 @@ def save_invoice(invoice: dict):
     if not uid:
         raise HTTPException(status_code=400, detail="Missing invoice ID")
 
-    path = os.path.join("data/overview", f"{uid}.json")
-    with open(path, "w", encoding="utf-8") as f:
+    path = OVERVIEW_DIR / f"{Path(uid).name}.json"
+    with path.open("w", encoding="utf-8") as f:
         json.dump(invoice, f, indent=2, ensure_ascii=False)
     return {"status": "saved"}
 
 @router.get("/overview/get_invoice")
 def get_invoice(id: str = Query(...)):
-    path = f"data/overview/{id}.json"
-    if not os.path.exists(path):
+    path = OVERVIEW_DIR / f"{Path(id).name}.json"
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 @router.delete("/overview/delete/{id}")
 def delete_invoice(id: str):
-    file_path = os.path.join(overview_path, f"{id}.json")
+    file_path = OVERVIEW_DIR / f"{Path(id).name}.json"
 
-    if not os.path.exists(file_path):
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    os.remove(file_path)
+    file_path.unlink()
     return {"status": "deleted"}
 
 @router.delete("/overview/delete_all")
 def delete_all_invoices():
-    if not os.path.exists(overview_path):
+    if not OVERVIEW_DIR.exists():
         return {"status": "already empty"}
 
-    for filename in os.listdir(overview_path):
-        if filename.endswith(".json"):
-            os.remove(os.path.join(overview_path, filename))
+    for path in OVERVIEW_DIR.iterdir():
+        if path.is_file() and path.suffix == ".json":
+            path.unlink()
 
     return {"status": "cleared"}
 
 @router.get("/overview/list_invoices", response_model=List[OverviewInvoice])
 def list_invoices():
     invoices = []
-    for filename in os.listdir(overview_path):
-        if filename.endswith(".json"):
-            with open(os.path.join(overview_path, filename), 'r') as f:
+    for path in OVERVIEW_DIR.iterdir():
+        if path.is_file() and path.suffix == ".json":
+            with path.open('r', encoding="utf-8") as f:
                 data = json.load(f)
                 try:
                     data.setdefault("systemValues", {})
                     invoices.append(OverviewInvoice(**data))
                 except Exception as e:
-                    print(f"⚠️ Skipping {filename} due to error: {e}")
+                    print(f"Skipping {path.name} due to error: {e}")
     invoices.sort(key=lambda x: x.order)
     return invoices
 
 @router.patch("/overview/update_invoice/{invoice_id}")
 def update_invoice(invoice_id: str, updated_fields: dict):
-    file_path = os.path.join(overview_path, f"{invoice_id}.json")
-    if not os.path.exists(file_path):
+    file_path = OVERVIEW_DIR / f"{Path(invoice_id).name}.json"
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="Invoice not found")
-    with open(file_path, 'r') as f:
+    with file_path.open('r', encoding="utf-8") as f:
         data = json.load(f)
     data.update(updated_fields)
-    with open(file_path, 'w') as f:
+    with file_path.open('w', encoding="utf-8") as f:
         json.dump(data, f)
     return {"status": "Invoice updated"}
 
@@ -118,10 +123,10 @@ class ExportRequest(BaseModel):
 def export_selected(req: ExportRequest):
     root = ET.Element("Invoices")
     for invoice_id in req.ids:
-        file_path = os.path.join(overview_path, f"{invoice_id}.json")
-        if not os.path.exists(file_path):
+        file_path = OVERVIEW_DIR / f"{Path(invoice_id).name}.json"
+        if not file_path.exists():
             continue
-        with open(file_path, 'r') as f:
+        with file_path.open('r', encoding="utf-8") as f:
             data = json.load(f)
 
         inv_elem = ET.SubElement(root, "Invoice")
@@ -184,12 +189,11 @@ def build_flexibee_invoice_xml(invoice: dict) -> ET.Element:
         ET.SubElement(ceny, "osv").text = str(osv_value)
 
     if image_filename:
-        queue_dir = f"data/queues/{invoice.get('batch_name')}"
-        image_path = os.path.join(queue_dir, image_filename)
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as img_file:
+        image_path = QUEUE_DIR / str(invoice.get("batch_name") or "") / Path(image_filename).name
+        if image_path.exists():
+            with image_path.open("rb") as img_file:
                 encoded = base64.b64encode(img_file.read()).decode("utf-8")
-            ext = os.path.splitext(image_filename)[1].lower()
+            ext = Path(image_filename).suffix.lower()
             content_type = mimetypes.types_map.get(ext, "image/png")
             filename_xml = f"{invoice_number}_{template}{ext}"
 
@@ -203,15 +207,14 @@ def build_flexibee_invoice_xml(invoice: dict) -> ET.Element:
 
 @router.post("/overview/export_flexibee")
 def export_flexibee(selected_ids: List[str] = Body(...)):
-    overview_dir = "data/overview"
     winstrom = ET.Element("winstrom", attrib={"version": "1.0", "source": "OCRApp"})
 
     for uid in selected_ids:
-        path = os.path.join(overview_dir, f"{uid}.json")
-        if not os.path.exists(path):
+        path = OVERVIEW_DIR / f"{Path(uid).name}.json"
+        if not path.exists():
             continue
 
-        with open(path, "r", encoding="utf-8") as f:
+        with path.open("r", encoding="utf-8") as f:
             invoice = json.load(f)
         winstrom.append(build_flexibee_invoice_xml(invoice))
 
@@ -225,17 +228,15 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
 
 @router.get("/profiles/export/flexibee-examples")
 def export_profile_flexibee_examples():
-    profiles_dir = "data/profiles"
-    if not os.path.exists(profiles_dir):
+    if not PROFILE_DIR.exists():
         raise HTTPException(status_code=404, detail="No profiles found")
 
-    overview_dir = "data/overview"
     invoice_candidates: list[dict] = []
-    if os.path.exists(overview_dir):
-        for filename in sorted(os.listdir(overview_dir)):
-            if not filename.endswith(".json"):
+    if OVERVIEW_DIR.exists():
+        for path in sorted(OVERVIEW_DIR.iterdir()):
+            if not path.is_file() or path.suffix != ".json":
                 continue
-            with open(os.path.join(overview_dir, filename), "r", encoding="utf-8") as f:
+            with path.open("r", encoding="utf-8") as f:
                 try:
                     invoice_candidates.append(json.load(f))
                 except json.JSONDecodeError:
@@ -246,10 +247,10 @@ def export_profile_flexibee_examples():
     skipped_profiles: list[str] = []
 
     with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
-        for profile_name in sorted(os.listdir(profiles_dir)):
-            profile_path = os.path.join(profiles_dir, profile_name)
-            if not os.path.isdir(profile_path):
+        for profile_path in sorted(PROFILE_DIR.iterdir()):
+            if not profile_path.is_dir():
                 continue
+            profile_name = profile_path.name
 
             matched_invoice = next(
                 (invoice for invoice in invoice_candidates if invoice.get("template_used") == profile_name),

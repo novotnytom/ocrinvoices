@@ -3,25 +3,27 @@ from fastapi.responses import FileResponse
 from pdf2image import convert_from_bytes
 from PIL import Image
 import mimetypes
-import os
 import zipfile
 import uuid
 import json
+from pathlib import Path
+
+try:
+    from path_utils import TEMP_DIR, PROFILE_DIR
+except ImportError:
+    from server.path_utils import TEMP_DIR, PROFILE_DIR
 
 router = APIRouter()
 
-TEMP_DIR = "temp_batches"
-PROFILE_DIR = "data/profiles"
-
-os.makedirs(TEMP_DIR, exist_ok=True)
+TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 def _load_profile(profile: str):
-    profile_path = os.path.join(PROFILE_DIR, profile)
-    config_path = os.path.join(profile_path, "config.json")
-    if not os.path.exists(config_path):
+    profile_path = PROFILE_DIR / profile
+    config_path = profile_path / "config.json"
+    if not config_path.exists():
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    with open(config_path, "r", encoding="utf-8") as f:
+    with config_path.open("r", encoding="utf-8") as f:
         config = json.load(f)
 
     if isinstance(config, dict):
@@ -39,8 +41,8 @@ def _load_profile(profile: str):
         zone["height"] = int(zone["height"])
 
     if template_width is None:
-        image_path = os.path.join(profile_path, "preview.jpg")
-        if os.path.exists(image_path):
+        image_path = profile_path / "preview.jpg"
+        if image_path.exists():
             try:
                 with Image.open(image_path) as img:
                     template_width = int(img.width)
@@ -60,9 +62,9 @@ def _load_profile(profile: str):
 
 def _create_batch_dir() -> tuple[str, str]:
     batch_id = str(uuid.uuid4())
-    batch_dir = os.path.join(TEMP_DIR, batch_id)
-    os.makedirs(batch_dir, exist_ok=True)
-    return batch_id, batch_dir
+    batch_dir = TEMP_DIR / batch_id
+    batch_dir.mkdir(parents=True, exist_ok=True)
+    return batch_id, str(batch_dir)
 
 def _build_page_payload(
     batch_id: str,
@@ -96,27 +98,28 @@ async def process_zip(zip: UploadFile = File(...), profile: str = Form(...)):
     batch_id, batch_dir = _create_batch_dir()
 
     # Extract ZIP
-    zip_path = os.path.join(batch_dir, zip.filename)
-    with open(zip_path, "wb") as f:
+    batch_path = Path(batch_dir)
+    zip_path = batch_path / Path(zip.filename).name
+    with zip_path.open("wb") as f:
         content = await zip.read()
         f.write(content)
 
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(batch_dir)
+        zip_ref.extractall(batch_path)
 
-    os.remove(zip_path)
+    zip_path.unlink()
 
     # Filter image files
     image_files = sorted([
-        f for f in os.listdir(batch_dir)
-        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+        path.name for path in batch_path.iterdir()
+        if path.is_file() and path.suffix.lower() in {'.jpg', '.jpeg', '.png'}
     ])
 
     pages = []
     for filename in image_files:
         image_url = f"/temp/{batch_id}/{filename}"
         page_zones = [dict(z) for z in zones]
-        image_path = os.path.join(batch_dir, filename)
+        image_path = batch_path / filename
         try:
             with Image.open(image_path) as page_image:
                 document_width = int(page_image.width)
@@ -164,8 +167,10 @@ async def process_image(image: UploadFile = File(...), profile: str = Form(...))
 
         return {"pages": pages}
 
-    image_path = os.path.join(batch_dir, filename)
-    with open(image_path, "wb") as f:
+    batch_path = Path(batch_dir)
+    safe_filename = Path(filename).name
+    image_path = batch_path / safe_filename
+    with image_path.open("wb") as f:
         f.write(content)
 
     try:
@@ -174,13 +179,13 @@ async def process_image(image: UploadFile = File(...), profile: str = Form(...))
     except OSError:
         raise HTTPException(status_code=400, detail="Unable to read uploaded image dimensions.")
 
-    return {"pages": [_build_page_payload(batch_id, filename, zones, document_width, template_width)]}
+    return {"pages": [_build_page_payload(batch_id, safe_filename, zones, document_width, template_width)]}
 
 # Serve images from temp
 @router.get("/temp/{batch_id}/{filename}")
 def get_temp_image(batch_id: str, filename: str):
-    path = os.path.join(TEMP_DIR, batch_id, filename)
-    if not os.path.exists(path):
+    path = TEMP_DIR / batch_id / Path(filename).name
+    if not path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     media_type, _ = mimetypes.guess_type(path)
     return FileResponse(path, media_type=media_type or "application/octet-stream")
