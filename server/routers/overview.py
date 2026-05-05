@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Body, Query
 from pydantic import BaseModel
 from typing import List, Optional
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 import os
 import json
 import uuid
@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ET
 import base64
 import mimetypes
 import re
+import io
+import zipfile
 
 router = APIRouter()
 
@@ -149,6 +151,56 @@ def sanitize_xml_tree(root: ET.Element):
         if tag in NUMERIC_TAGS and elem.text:
             elem.text = clean_number(elem.text)
 
+
+def build_flexibee_invoice_xml(invoice: dict) -> ET.Element:
+    values = dict(invoice.get("values", {}) or {})
+
+    dat_splat = values.get("datSplat", "").strip()
+    if not dat_splat or dat_splat == "0":
+        dat_vyst = values.get("datVyst")
+        if dat_vyst:
+            values["datSplat"] = dat_vyst
+
+    items = invoice.get("invoiceItems", [])
+    template = invoice.get("template_used", "default")
+    invoice_number = invoice.get("invoice_number", "unknown")
+    image_filename = invoice.get("imageFilename")
+
+    faktura = ET.Element("faktura-prijata")
+
+    for key, value in values.items():
+        ET.SubElement(faktura, key).text = str(value)
+
+    polozky = ET.SubElement(faktura, "polozkyFaktury")
+    for item in items:
+        polozka = ET.SubElement(polozky, "faktura-prijata-polozka")
+        for k, v in item.items():
+            ET.SubElement(polozka, k).text = str(v)
+
+    osv_value = values.get("osv")
+    if osv_value:
+        zaokrouhli = ET.SubElement(faktura, "zaokrouhli")
+        ceny = ET.SubElement(zaokrouhli, "pozadovaneCeny")
+        ET.SubElement(ceny, "osv").text = str(osv_value)
+
+    if image_filename:
+        queue_dir = f"data/queues/{invoice.get('batch_name')}"
+        image_path = os.path.join(queue_dir, image_filename)
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as img_file:
+                encoded = base64.b64encode(img_file.read()).decode("utf-8")
+            ext = os.path.splitext(image_filename)[1].lower()
+            content_type = mimetypes.types_map.get(ext, "image/png")
+            filename_xml = f"{invoice_number}_{template}{ext}"
+
+            prilohy = ET.SubElement(faktura, "prilohy")
+            priloha = ET.SubElement(prilohy, "priloha")
+            ET.SubElement(priloha, "nazSoub").text = filename_xml
+            ET.SubElement(priloha, "contentType").text = content_type
+            ET.SubElement(priloha, "content", attrib={"encoding": "base64"}).text = encoded
+
+    return faktura
+
 @router.post("/overview/export_flexibee")
 def export_flexibee(selected_ids: List[str] = Body(...)):
     overview_dir = "data/overview"
@@ -161,52 +213,7 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
 
         with open(path, "r", encoding="utf-8") as f:
             invoice = json.load(f)
-
-        values = invoice.get("values", {})
-
-        dat_splat = values.get("datSplat", "").strip()
-        if not dat_splat or dat_splat == "0":
-            dat_vyst = values.get("datVyst")
-            if dat_vyst:
-                values["datSplat"] = dat_vyst
-
-        items = invoice.get("invoiceItems", [])
-        template = invoice.get("template_used", "default")
-        invoice_number = invoice.get("invoice_number", "unknown")
-        image_filename = invoice.get("imageFilename")
-
-        faktura = ET.SubElement(winstrom, "faktura-prijata")
-
-        for key, value in values.items():
-            ET.SubElement(faktura, key).text = str(value)
-
-        polozky = ET.SubElement(faktura, "polozkyFaktury")
-        for item in items:
-            polozka = ET.SubElement(polozky, "faktura-prijata-polozka")
-            for k, v in item.items():
-                ET.SubElement(polozka, k).text = str(v)
-
-        osv_value = values.get("osv")
-        if osv_value:
-            zaokrouhli = ET.SubElement(faktura, "zaokrouhli")
-            ceny = ET.SubElement(zaokrouhli, "pozadovaneCeny")
-            ET.SubElement(ceny, "osv").text = str(osv_value)
-
-        if image_filename:
-            queue_dir = f"data/queues/{invoice.get('batch_name')}"
-            image_path = os.path.join(queue_dir, image_filename)
-            if os.path.exists(image_path):
-                with open(image_path, "rb") as img_file:
-                    encoded = base64.b64encode(img_file.read()).decode("utf-8")
-                ext = os.path.splitext(image_filename)[1].lower()
-                content_type = mimetypes.types_map.get(ext, "image/png")
-                filename_xml = f"{invoice_number}_{template}{ext}"
-
-                prilohy = ET.SubElement(faktura, "prilohy")
-                priloha = ET.SubElement(prilohy, "priloha")
-                ET.SubElement(priloha, "nazSoub").text = filename_xml
-                ET.SubElement(priloha, "contentType").text = content_type
-                ET.SubElement(priloha, "content", attrib={"encoding": "base64"}).text = encoded
+        winstrom.append(build_flexibee_invoice_xml(invoice))
 
     # 🧼 Sanitize numeric values in-place in XML tree
     sanitize_xml_tree(winstrom)
@@ -214,3 +221,60 @@ def export_flexibee(selected_ids: List[str] = Body(...)):
     # Export as string
     xml_str = ET.tostring(winstrom, encoding="utf-8", method="xml")
     return Response(content=xml_str, media_type="application/xml")
+
+
+@router.get("/profiles/export/flexibee-examples")
+def export_profile_flexibee_examples():
+    profiles_dir = "data/profiles"
+    if not os.path.exists(profiles_dir):
+        raise HTTPException(status_code=404, detail="No profiles found")
+
+    overview_dir = "data/overview"
+    invoice_candidates: list[dict] = []
+    if os.path.exists(overview_dir):
+        for filename in sorted(os.listdir(overview_dir)):
+            if not filename.endswith(".json"):
+                continue
+            with open(os.path.join(overview_dir, filename), "r", encoding="utf-8") as f:
+                try:
+                    invoice_candidates.append(json.load(f))
+                except json.JSONDecodeError:
+                    continue
+
+    zip_buffer = io.BytesIO()
+    exported_count = 0
+    skipped_profiles: list[str] = []
+
+    with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+        for profile_name in sorted(os.listdir(profiles_dir)):
+            profile_path = os.path.join(profiles_dir, profile_name)
+            if not os.path.isdir(profile_path):
+                continue
+
+            matched_invoice = next(
+                (invoice for invoice in invoice_candidates if invoice.get("template_used") == profile_name),
+                None,
+            )
+
+            if matched_invoice is None:
+                skipped_profiles.append(profile_name)
+                continue
+
+            winstrom = ET.Element("winstrom", attrib={"version": "1.0", "source": "OCRApp"})
+            winstrom.append(build_flexibee_invoice_xml(matched_invoice))
+            sanitize_xml_tree(winstrom)
+
+            xml_bytes = ET.tostring(winstrom, encoding="utf-8", method="xml")
+            zip_file.writestr(f"{profile_name}__sample_flexibee.xml", xml_bytes)
+            exported_count += 1
+
+        if skipped_profiles:
+            skipped_text = "Skipped templates without sample invoice data:\n" + "\n".join(skipped_profiles) + "\n"
+            zip_file.writestr("README.txt", skipped_text.encode("utf-8"))
+
+    if exported_count == 0:
+        raise HTTPException(status_code=404, detail="No templates with sample invoice data were found")
+
+    zip_buffer.seek(0)
+    headers = {"Content-Disposition": 'attachment; filename="flexibee_template_examples.zip"'}
+    return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)

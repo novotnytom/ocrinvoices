@@ -13,6 +13,10 @@ router = APIRouter()
 PROFILE_DIR = "data/profiles"
 os.makedirs(PROFILE_DIR, exist_ok=True)
 
+
+class SystemValuesUpdate(BaseModel):
+    systemValues: dict[str, str]
+
 class Zone(BaseModel):
     id: int
     x: int
@@ -20,6 +24,34 @@ class Zone(BaseModel):
     width: int
     height: int
     propertyName: str
+
+
+def _load_profile_config(name: str) -> tuple[str, dict | list]:
+    profile_path = os.path.join(PROFILE_DIR, name)
+    config_path = os.path.join(profile_path, "config.json")
+
+    if not os.path.exists(config_path):
+        raise HTTPException(status_code=404, detail="Profile config not found")
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        return profile_path, json.load(f)
+
+
+def _normalize_profile_config(config: dict | list, image_path: str) -> dict:
+    if isinstance(config, dict):
+        zones = config.get("zones", [])
+        system_values = config.get("systemValues", {})
+        template_width = _resolve_template_width(config, image_path)
+    else:
+        zones = config
+        system_values = {}
+        template_width = _resolve_template_width({}, image_path)
+
+    return {
+        "zones": zones,
+        "systemValues": system_values,
+        "templateWidth": template_width,
+    }
 
 
 def _resolve_template_width(config: dict | list, image_path: str) -> Optional[int]:
@@ -60,27 +92,30 @@ def list_profiles():
             })
     return profiles
 
+
+@router.patch("/{name}/system-values")
+def update_profile_system_values(name: str, payload: SystemValuesUpdate):
+    profile_path, raw_config = _load_profile_config(name)
+    image_path = os.path.join(profile_path, "preview.jpg")
+    config = _normalize_profile_config(raw_config, image_path)
+    config["systemValues"] = payload.systemValues or {}
+
+    with open(os.path.join(profile_path, "config.json"), "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+    return {"status": "ok", "name": name, "systemValues": config["systemValues"]}
+
 @router.get("/{name}")
 def get_profile(name: str):
-    profile_path = os.path.join(PROFILE_DIR, name)
-    config_path = os.path.join(profile_path, "config.json")
+    profile_path, raw_config = _load_profile_config(name)
     image_path = os.path.join(profile_path, "preview.jpg")
-
-    if not os.path.exists(config_path):
-        raise HTTPException(status_code=404, detail="Profile config not found")
-
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = json.load(f)
-
-    zones = config.get("zones") if isinstance(config, dict) else config
-    system_values = config.get("systemValues", {}) if isinstance(config, dict) else {}
-    template_width = _resolve_template_width(config, image_path)
+    config = _normalize_profile_config(raw_config, image_path)
 
     return {
         "name": name,
-        "zones": zones,
-        "systemValues": system_values,
-        "templateWidth": template_width,
+        "zones": config["zones"],
+        "systemValues": config["systemValues"],
+        "templateWidth": config["templateWidth"],
         "image_url": f"/profiles/{name}/preview.jpg"
     }
 

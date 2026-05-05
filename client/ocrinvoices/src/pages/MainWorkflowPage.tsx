@@ -41,6 +41,7 @@ export default function MainWorkflowPage() {
   const [selectedProfile, setSelectedProfile] = useState('');
   const [batchName, setBatchName] = useState('');
   const [propertyNames, setPropertyNames] = useState<string[]>([]);
+  const [systemFieldNames, setSystemFieldNames] = useState<string[]>([]);
   const [systemValues, setSystemValues] = useState<Record<string, string>>({});
   const [invoiceDateField, setInvoiceDateField] = useState("");
   const [invoiceNumberField, setInvoiceNumberField] = useState("");
@@ -50,6 +51,19 @@ export default function MainWorkflowPage() {
   const [searchParams] = useSearchParams();
   const queueName = searchParams.get('queue');
   const isEditing = !!queueName;
+
+  const buildSystemValuesFromTemplate = (
+    fieldNames: string[],
+    templateValues?: Record<string, string>,
+    existingValues?: Record<string, string>
+  ) => {
+    return Object.fromEntries(
+      fieldNames.map((name) => [
+        name,
+        existingValues?.[name] ?? templateValues?.[name] ?? "",
+      ])
+    );
+  };
 
   const normalizeZones = (zones: any[]): Zone[] => {
     return zones.map((zone) => ({
@@ -163,7 +177,20 @@ export default function MainWorkflowPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedProfile) return;
+    const loadSystemFields = async () => {
+      const templateRes = await fetch("http://localhost:8000/export-template/load");
+      const templateFields = await templateRes.json();
+      const fieldNames = templateFields
+        .filter((f: any) => f.system === true)
+        .map((f: any) => f.name);
+      setSystemFieldNames(fieldNames);
+    };
+
+    loadSystemFields();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProfile || systemFieldNames.length === 0) return;
 
     const loadProfileFields = async () => {
       const res = await fetch(`http://localhost:8000/profiles/${selectedProfile}`);
@@ -187,18 +214,18 @@ export default function MainWorkflowPage() {
         }
       }
 
-      // load system fields from export-template
-      const templateRes = await fetch("http://localhost:8000/export-template/load");
-      const templateFields = await templateRes.json();
-      const systemFields = templateFields.filter((f: any) => f.system === true);
-      setSystemValues(prev => {
-        if (Object.keys(prev).length > 0) return prev; // preserve already loaded values
-        return Object.fromEntries(systemFields.map((f: any) => [f.name, ""]));
-      });
+      if (!isEditing) {
+        setSystemValues(buildSystemValuesFromTemplate(systemFieldNames, data.systemValues || {}));
+      }
     };
 
     loadProfileFields();
-  }, [selectedProfile]);
+  }, [selectedProfile, systemFieldNames, isEditing]);
+
+  useEffect(() => {
+    if (systemFieldNames.length === 0) return;
+    setSystemValues((prev) => buildSystemValuesFromTemplate(systemFieldNames, {}, prev));
+  }, [systemFieldNames]);
 
 
   useEffect(() => {
@@ -228,7 +255,7 @@ export default function MainWorkflowPage() {
         }, templateWidth);
       }));
       setPages(pagesWithDimensions);
-      setSystemValues(data.systemValues || {});
+      setSystemValues(buildSystemValuesFromTemplate(systemFieldNames, profileData?.systemValues || {}, data.systemValues || {}));
       if (data.fieldMapping) {
         setInvoiceDateField(data.fieldMapping.invoiceDateField || "");
         setInvoiceNumberField(data.fieldMapping.invoiceNumberField || "");
@@ -237,7 +264,7 @@ export default function MainWorkflowPage() {
 
     };
     loadQueue();
-  }, [queueName]);
+  }, [queueName, systemFieldNames]);
 
   const handleZipUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -359,6 +386,28 @@ export default function MainWorkflowPage() {
     }
   };
 
+  const handleSaveSystemValuesToTemplate = async () => {
+    if (!selectedProfile) {
+      alert("Please select a template first.");
+      return;
+    }
+
+    const response = await fetch(`http://localhost:8000/profiles/${selectedProfile}/system-values`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ systemValues }),
+    });
+
+    if (!response.ok) {
+      alert("Error saving XML fields to template.");
+      return;
+    }
+
+    const data = await response.json();
+    setSystemValues(buildSystemValuesFromTemplate(systemFieldNames, data.systemValues || {}, systemValues));
+    alert(`XML fields saved to template "${selectedProfile}".`);
+  };
+
   const handleSavePageAsTemplateVersion = async (pageIndex: number) => {
     const page = pages[pageIndex];
     if (!selectedProfile) {
@@ -456,11 +505,9 @@ export default function MainWorkflowPage() {
   const handlePropagateToOverview = async ({
     invoiceDateField,
     invoiceNumberField,
-    totalValueField,
   }: {
     invoiceDateField: string;
     invoiceNumberField: string;
-    totalValueField: string;
   }) => {
     const normalizeDate = (input: string): string => {
       const parts = input.match(/(\d{1,2})[.\/\-](\d{1,2})[.\/\-](\d{2,4})/);
@@ -568,10 +615,10 @@ export default function MainWorkflowPage() {
           onSave={handleSaveQueue}
           isEditing={isEditing}
           propertyNames={propertyNames}
-          invoices={pages.map(page => ({ ...page.values, template: selectedProfile }))}
           onPropagate={() =>
-            handlePropagateToOverview({ invoiceDateField, invoiceNumberField, totalValueField })
+            handlePropagateToOverview({ invoiceDateField, invoiceNumberField })
           }
+          onSaveSystemValuesToTemplate={handleSaveSystemValuesToTemplate}
         />
 
 

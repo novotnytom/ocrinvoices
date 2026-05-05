@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-
 interface TopPanelProps {
   profiles: string[];
   selectedProfile: string;
@@ -10,7 +8,6 @@ interface TopPanelProps {
   isEditing: boolean;
   showSaveButton?: boolean;
   propertyNames: string[];
-  invoices: any[];
   systemValues: Record<string, string>;
   setSystemValues: (v: Record<string, string>) => void;
   invoiceDateField: string;
@@ -24,6 +21,7 @@ interface TopPanelProps {
     invoiceNumberField: string;
     totalValueField: string;
   }) => void;
+  onSaveSystemValuesToTemplate: () => void;
 }
 
 export default function TopPanel({
@@ -35,7 +33,6 @@ export default function TopPanel({
   onSave,
   isEditing,
   propertyNames,
-  invoices,
   onPropagate,
   systemValues,
   setSystemValues,
@@ -45,7 +42,8 @@ export default function TopPanel({
   setInvoiceNumberField,
   totalValueField,
   setTotalValueField,
-  showSaveButton = true
+  showSaveButton = true,
+  onSaveSystemValuesToTemplate
 }: TopPanelProps) {
 
   const canPropagate = Boolean(
@@ -99,6 +97,13 @@ export default function TopPanel({
               Save
             </button>
           )}
+          <button
+            onClick={onSaveSystemValuesToTemplate}
+            disabled={!selectedProfile}
+            className={`px-4 py-2 rounded text-white ${selectedProfile ? 'bg-blue-600' : 'bg-gray-400 cursor-not-allowed'}`}
+          >
+            Save XML Fields to Template
+          </button>
         </div>
       </div>
 
