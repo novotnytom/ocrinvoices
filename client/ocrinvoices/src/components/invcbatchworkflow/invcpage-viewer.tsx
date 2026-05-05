@@ -1,6 +1,6 @@
 // Updated PageViewer.tsx with Move-All Delta Logic
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva';
 import useImage from 'use-image';
 import ZoneResizeToolbar from './zone-resize-toolbar';
@@ -58,6 +58,16 @@ export default function PageViewer({
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [itemRowYOffset, setItemRowYOffset] = useState(40); // default 40
   const stageRef = useRef<any>(null);
+  const zonesRef = useRef(zones);
+  const selectedPropertyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    zonesRef.current = zones;
+  }, [zones]);
+
+  useEffect(() => {
+    selectedPropertyRef.current = selectedProperty;
+  }, [selectedProperty]);
 
   const itemZones = zones.filter(z => z.isItem);
   const nonItemZones = zones.filter(zone => !zone.isItem);
@@ -90,10 +100,11 @@ export default function PageViewer({
   };
 
   const handleResizeZone = (direction: 'width' | 'width-' | 'height' | 'height-') => {
-    if (!selectedProperty) return;
+    const activeProperty = selectedPropertyRef.current;
+    if (!activeProperty) return;
 
-    const updatedZones = zones.map((z) =>
-      z.propertyName === selectedProperty
+    const updatedZones = zonesRef.current.map((z) =>
+      z.propertyName === activeProperty
         ? {
           ...z,
           width:
