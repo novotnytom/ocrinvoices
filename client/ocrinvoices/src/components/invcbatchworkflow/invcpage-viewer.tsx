@@ -1,6 +1,5 @@
-// Updated PageViewer.tsx with Move-All Delta Logic
-
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Konva from 'konva';
 import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva';
 import useImage from 'use-image';
 import ZoneResizeToolbar from './zone-resize-toolbar';
@@ -34,8 +33,13 @@ interface PageViewerProps {
   onZoneChange?: (zones: Zone[]) => void;
 }
 
+const STAGE_WIDTH = 650;
+const STAGE_HEIGHT = 800;
+const ZOOM_STEP = 1.05;
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 8;
+
 export default function PageViewer({
-  pageIndex: _pageIndex,
   imageUrl,
   zones,
   values,
@@ -52,12 +56,12 @@ export default function PageViewer({
   onZoneChange,
 }: PageViewerProps) {
   const [image] = useImage(`http://localhost:8000${imageUrl}`, 'anonymous');
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [viewport, setViewport] = useState({ scale: 1, x: 0, y: 0 });
   const [deltaMove, setDeltaMove] = useState<{ dx: number; dy: number; movedZoneId: number } | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [itemRowYOffset, setItemRowYOffset] = useState(40); // default 40
-  const stageRef = useRef<any>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const stageRef = useRef<Konva.Stage | null>(null);
   const zonesRef = useRef(zones);
   const selectedPropertyRef = useRef<string | null>(null);
 
@@ -68,6 +72,28 @@ export default function PageViewer({
   useEffect(() => {
     selectedPropertyRef.current = selectedProperty;
   }, [selectedProperty]);
+
+  const fitToStage = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage || !image) return;
+
+    const stageWidth = stage.width();
+    const imageWidth = image.width;
+
+    if (!imageWidth) return;
+
+    const scale = stageWidth / imageWidth;
+
+    setViewport({
+      scale,
+      x: 0,
+      y: 0,
+    });
+  }, [image]);
+
+  useEffect(() => {
+    fitToStage();
+  }, [fitToStage, imageUrl]);
 
   const itemZones = zones.filter(z => z.isItem);
   const nonItemZones = zones.filter(zone => !zone.isItem);
@@ -160,12 +186,13 @@ export default function PageViewer({
           </div>
           <Stage
             ref={stageRef}
-            width={650}
-            height={800}
-            scaleX={scale}
-            scaleY={scale}
-            x={position.x}
-            y={position.y}
+            width={STAGE_WIDTH}
+            height={STAGE_HEIGHT}
+            scaleX={viewport.scale}
+            scaleY={viewport.scale}
+            x={viewport.x}
+            y={viewport.y}
+            draggable={isPanning}
             onWheel={(e) => {
               e.evt.preventDefault();
               const stage = stageRef.current;
@@ -173,28 +200,56 @@ export default function PageViewer({
               const pointer = stage.getPointerPosition();
               if (!pointer) return;
 
-              const scaleBy = 1.05;
               const direction = e.evt.deltaY > 0 ? -1 : 1;
-              const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-
-              setScale(newScale);
+              const stagePosition = stage.position();
+              const unclampedScale = direction > 0 ? oldScale * ZOOM_STEP : oldScale / ZOOM_STEP;
+              const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, unclampedScale));
 
               const mousePointTo = {
-                x: (pointer.x - position.x) / oldScale,
-                y: (pointer.y - position.y) / oldScale,
+                x: (pointer.x - stagePosition.x) / oldScale,
+                y: (pointer.y - stagePosition.y) / oldScale,
               };
 
-              setPosition({
+              setViewport({
+                scale: newScale,
                 x: pointer.x - mousePointTo.x * newScale,
                 y: pointer.y - mousePointTo.y * newScale,
               });
             }}
             onMouseDown={(e) => {
               if (e.evt.button === 1) {
+                e.evt.preventDefault();
+                setIsPanning(true);
                 stageRef.current.startDrag();
               }
             }}
-            style={{ border: '1px solid #ccc', cursor: 'grab' }}
+            onMouseUp={() => {
+              setIsPanning(false);
+            }}
+            onMouseLeave={() => {
+              setIsPanning(false);
+            }}
+            onDragMove={(e) => {
+              if (!isPanning) return;
+              const stage = e.target;
+              const stagePosition = stage.position();
+              setViewport((prev) => ({
+                ...prev,
+                x: stagePosition.x,
+                y: stagePosition.y,
+              }));
+            }}
+            onDragEnd={(e) => {
+              const stage = e.target;
+              const stagePosition = stage.position();
+              setViewport((prev) => ({
+                ...prev,
+                x: stagePosition.x,
+                y: stagePosition.y,
+              }));
+              setIsPanning(false);
+            }}
+            style={{ border: '1px solid #ccc', cursor: isPanning ? 'grabbing' : 'grab' }}
           >
             <Layer>
               {image && <KonvaImage image={image} />}
@@ -244,24 +299,7 @@ export default function PageViewer({
                 </button>
               )}
               <button
-                onClick={() => {
-                  if (stageRef.current && image) {
-                    const stageWidth = 800;
-                    const stageHeight = 600;
-                    const imageWidth = image.width;
-                    const imageHeight = image.height;
-
-                    const scaleX = stageWidth / imageWidth;
-                    const scaleY = stageHeight / imageHeight;
-                    const newScale = Math.min(scaleX, scaleY);
-
-                    setScale(newScale);
-                    setPosition({
-                      x: (stageWidth - imageWidth * newScale) / 2,
-                      y: (stageHeight - imageHeight * newScale) / 2,
-                    });
-                  }
-                }}
+                onClick={fitToStage}
                 className="text-xs bg-gray-300 hover:bg-gray-400 px-3 py-1 rounded"
               >
                 🔍 Fit Image

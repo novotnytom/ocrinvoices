@@ -4,8 +4,11 @@ import DashboardLayout from '../dashboard/layout';
 import InvoiceProfileTable, { Profile } from '../components/invcprofiles/invcprofiletable';
 import { Button } from '@/components/ui/button';
 
+type ProfileSortOption = 'name-asc' | 'name-desc' | 'date-desc' | 'date-asc';
+
 export default function ProfileOverviewPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [sortBy, setSortBy] = useState<ProfileSortOption>('date-desc');
   const navigate = useNavigate();
 
   const loadProfiles = async () => {
@@ -25,6 +28,21 @@ export default function ProfileOverviewPage() {
   useEffect(() => {
     loadProfiles();
   }, []);
+
+  const sortedProfiles = [...profiles].sort((a, b) => {
+    if (sortBy === 'name-asc') {
+      return a.name.localeCompare(b.name);
+    }
+
+    if (sortBy === 'name-desc') {
+      return b.name.localeCompare(a.name);
+    }
+
+    const aTime = a.updated ? new Date(a.updated).getTime() : 0;
+    const bTime = b.updated ? new Date(b.updated).getTime() : 0;
+
+    return sortBy === 'date-asc' ? aTime - bTime : bTime - aTime;
+  });
 
   const handleExportFlexibeeExamples = async () => {
     const response = await fetch('http://localhost:8000/profiles/export/flexibee-examples');
@@ -52,6 +70,19 @@ export default function ProfileOverviewPage() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">Invoice Profiles</h1>
           <div className="flex gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Sort by</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as ProfileSortOption)}
+                className="rounded border border-gray-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="date-desc">Newest first</option>
+                <option value="date-asc">Oldest first</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+              </select>
+            </label>
             <Button variant="outline" onClick={handleExportFlexibeeExamples}>
               Export FlexiBee XML Examples
             </Button>
@@ -63,7 +94,7 @@ export default function ProfileOverviewPage() {
             </button>
           </div>
         </div>
-        <InvoiceProfileTable profiles={profiles} onDelete={deleteProfile} />
+        <InvoiceProfileTable profiles={sortedProfiles} onDelete={deleteProfile} />
       </div>
     </DashboardLayout>
   );

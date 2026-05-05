@@ -1,5 +1,6 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Konva from 'konva';
 import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva';
 import useImage from 'use-image';
 import DashboardLayout from '../dashboard/layout';
@@ -19,6 +20,17 @@ interface Zone {
   isItem?: boolean;
 }
 
+interface ExportTemplateField {
+  name: string;
+  system?: boolean;
+}
+
+const STAGE_WIDTH = 800;
+const STAGE_HEIGHT = 600;
+const ZOOM_STEP = 1.05;
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 8;
+
 export default function ProfileSetupPage() {
   const { name: paramName } = useParams();
   const navigate = useNavigate();
@@ -32,17 +44,37 @@ export default function ProfileSetupPage() {
   const [systemValues, setSystemValues] = useState<Record<string, string>>({});
 
   const [zoneIdCounter, setZoneIdCounter] = useState(1);
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [viewport, setViewport] = useState({ scale: 1, x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const [lastPanPos, setLastPanPos] = useState<{ x: number; y: number } | null>(null);
   const [drawingMode, setDrawingMode] = useState(false);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [tempRect, setTempRect] = useState<Zone | null>(null);
   const [hoveredZoneId, setHoveredZoneId] = useState<number | null>(null);
 
-  const stageRef = useRef<any>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
   const [image] = useImage(imageURL || '', 'anonymous');
+
+  const fitToStage = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage || !image) return;
+
+    const stageWidth = stage.width();
+    const imageWidth = image.width;
+
+    if (!imageWidth) return;
+
+    const scale = stageWidth / imageWidth;
+
+    setViewport({
+      scale,
+      x: 0,
+      y: 0,
+    });
+  }, [image]);
+
+  useEffect(() => {
+    fitToStage();
+  }, [fitToStage, imageURL]);
 
   useEffect(() => {
     if (!paramName) return;
@@ -77,8 +109,8 @@ export default function ProfileSetupPage() {
       const templateRes = await fetch("http://localhost:8000/export-template/load");
       const templateFields = await templateRes.json();
       const systemFields = templateFields
-        .filter((f: any) => f.system === true)
-        .map((f: any) => f.name);
+        .filter((f: ExportTemplateField) => f.system === true)
+        .map((f: ExportTemplateField) => f.name);
       setSystemFieldNames(systemFields);
     };
     loadSystemFields();
@@ -183,39 +215,59 @@ export default function ProfileSetupPage() {
       if (!res.ok) throw new Error("Failed to save");
       alert("Saved");
       navigate("/profiles");
-    } catch (err) {
+    } catch {
       alert("Error saving profile");
     }
   };
 
-  const handleMouseDown = (e: any) => {
+  const getCanvasPoint = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return null;
+
+    const stagePosition = stage.position();
+    const scale = stage.scaleX();
+
+    return {
+      x: (pointer.x - stagePosition.x) / scale,
+      y: (pointer.y - stagePosition.y) / scale,
+    };
+  }, []);
+
+  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.button === 1) {
+      e.evt.preventDefault();
       setIsPanning(true);
-      setLastPanPos({ x: e.evt.clientX, y: e.evt.clientY });
+      stageRef.current?.startDrag();
       return;
     }
     if (!drawingMode) return;
-    const pointer = stageRef.current.getPointerPosition();
+    const pointer = getCanvasPoint();
     if (pointer) setStartPoint(pointer);
   };
 
-  const handleMouseMove = (e: any) => {
-    if (isPanning && lastPanPos) {
-      const dx = e.evt.clientX - lastPanPos.x;
-      const dy = e.evt.clientY - lastPanPos.y;
-      setPosition((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-      setLastPanPos({ x: e.evt.clientX, y: e.evt.clientY });
+  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isPanning) {
+      const stage = e.target.getStage();
+      if (!stage) return;
+      const stagePosition = stage.position();
+      setViewport((prev) => ({
+        ...prev,
+        x: stagePosition.x,
+        y: stagePosition.y,
+      }));
       return;
     }
     if (!drawingMode || !startPoint) return;
-    const pointer = stageRef.current.getPointerPosition();
+    const pointer = getCanvasPoint();
     if (!pointer) return;
     setTempRect({
       id: -1,
-      x: Math.round((Math.min(startPoint.x, pointer.x) - position.x) / scale),
-      y: Math.round((Math.min(startPoint.y, pointer.y) - position.y) / scale),
-      width: Math.round(Math.abs(pointer.x - startPoint.x) / scale),
-      height: Math.round(Math.abs(pointer.y - startPoint.y) / scale),
+      x: Math.round(Math.min(startPoint.x, pointer.x)),
+      y: Math.round(Math.min(startPoint.y, pointer.y)),
+      width: Math.round(Math.abs(pointer.x - startPoint.x)),
+      height: Math.round(Math.abs(pointer.y - startPoint.y)),
       propertyName: '',
     });
   };
@@ -223,7 +275,6 @@ export default function ProfileSetupPage() {
   const handleMouseUp = () => {
     if (isPanning) {
       setIsPanning(false);
-      setLastPanPos(null);
       return;
     }
     if (!drawingMode || !startPoint || !tempRect) return;
@@ -271,6 +322,7 @@ export default function ProfileSetupPage() {
             onChangeImage={() => setImageURL(null)}
             onGlobalOCR={() => alert('TODO: Global OCR')}
             onAddZone={() => setDrawingMode(true)}
+            onFitImage={fitToStage}
             drawingMode={drawingMode}
           />
         )}
@@ -282,26 +334,30 @@ export default function ProfileSetupPage() {
             ) : (
               <Stage
                 ref={stageRef}
-                width={800}
-                height={600}
-                scaleX={scale}
-                scaleY={scale}
-                x={position.x}
-                y={position.y}
+                width={STAGE_WIDTH}
+                height={STAGE_HEIGHT}
+                scaleX={viewport.scale}
+                scaleY={viewport.scale}
+                x={viewport.x}
+                y={viewport.y}
+                draggable={isPanning}
                 onWheel={(e) => {
                   e.evt.preventDefault();
-                  const scaleBy = 1.05;
                   const stage = stageRef.current;
+                  if (!stage) return;
+                  const oldScale = stage.scaleX();
                   const pointer = stage.getPointerPosition();
                   if (!pointer) return;
+                  const stagePosition = stage.position();
                   const mousePointTo = {
-                    x: (pointer.x - position.x) / scale,
-                    y: (pointer.y - position.y) / scale,
+                    x: (pointer.x - stagePosition.x) / oldScale,
+                    y: (pointer.y - stagePosition.y) / oldScale,
                   };
                   const direction = e.evt.deltaY > 0 ? -1 : 1;
-                  const newScale = scale * (direction > 0 ? scaleBy : 1 / scaleBy);
-                  setScale(newScale);
-                  setPosition({
+                  const unclampedScale = direction > 0 ? oldScale * ZOOM_STEP : oldScale / ZOOM_STEP;
+                  const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, unclampedScale));
+                  setViewport({
+                    scale: newScale,
                     x: pointer.x - mousePointTo.x * newScale,
                     y: pointer.y - mousePointTo.y * newScale,
                   });
@@ -309,7 +365,30 @@ export default function ProfileSetupPage() {
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
-                style={{ cursor: drawingMode ? 'crosshair' : hoveredZoneId ? 'grab' : 'default' }}
+                onMouseLeave={() => {
+                  setIsPanning(false);
+                }}
+                onDragMove={(e) => {
+                  if (!isPanning) return;
+                  const stage = e.target;
+                  const stagePosition = stage.position();
+                  setViewport((prev) => ({
+                    ...prev,
+                    x: stagePosition.x,
+                    y: stagePosition.y,
+                  }));
+                }}
+                onDragEnd={(e) => {
+                  const stage = e.target;
+                  const stagePosition = stage.position();
+                  setViewport((prev) => ({
+                    ...prev,
+                    x: stagePosition.x,
+                    y: stagePosition.y,
+                  }));
+                  setIsPanning(false);
+                }}
+                style={{ cursor: drawingMode ? 'crosshair' : isPanning ? 'grabbing' : hoveredZoneId ? 'grab' : 'default' }}
               >
                 <Layer>
                   {image && <KonvaImage image={image} />}
